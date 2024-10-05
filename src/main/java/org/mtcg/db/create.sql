@@ -23,7 +23,7 @@ CREATE TABLE users (
 CREATE TABLE cards (
                        card_id SERIAL PRIMARY KEY,
                        name VARCHAR(100) NOT NULL,
-                       damage INTEGER NOT NULL CHECK (damage >= 0),
+                       damage FLOAT NOT NULL CHECK (damage >= 0),
                        element_type VARCHAR(50) NOT NULL CHECK (element_type IN ('fire', 'water', 'normal')),
                        card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('spell-card', 'monster-card'))
 );
@@ -55,13 +55,12 @@ CREATE TABLE package_cards (
                                PRIMARY KEY (package_id, card_id)
 );
 
--- Create a table for Decks (Best 4 cards selected by the user)
+-- Create a table for Decks (Best 4 cards selected by the user -> in logic)
 CREATE TABLE decks (
                        deck_id SERIAL PRIMARY KEY,
                        user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
                        card_id INTEGER REFERENCES cards(card_id) ON DELETE CASCADE,
-                       UNIQUE(user_id, card_id) -- A user can have only one instance of a card in their deck
-    -- Note: Limiting to 4 cards in the deck should be handled by application logic
+                       UNIQUE(user_id, card_id)
 );
 
 -- Create a table for Battles

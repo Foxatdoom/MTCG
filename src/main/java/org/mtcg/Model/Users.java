@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Users {
     private String username;
     private String password;
-    private String token;
+    private String token; // Do I need it for the first hand-in????
 
     // Use @JsonCreator to define how to create an instance from JSON
     @JsonCreator
@@ -17,15 +17,6 @@ public class Users {
         this.username = username;
         this.password = password;
         this.token = username + "-mtcgToken"; // Generate the token based on username
-    }
-
-    // SETTER-Methods
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     // GETTER-Methods

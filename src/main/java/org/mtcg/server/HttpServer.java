@@ -1,10 +1,10 @@
 package org.mtcg.server;
 
 import org.mtcg.db.DbAccess;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 
 public class HttpServer {
     public static void main(String[] args) {
@@ -39,7 +39,6 @@ class ClientHandler implements Runnable {
                 InputStream input = socket.getInputStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(input)); // -> curl script
 
-                // necessary?
                 OutputStream output = socket.getOutputStream();
                 PrintWriter writer = new PrintWriter(output, true)
         ) {
@@ -83,10 +82,8 @@ class ClientHandler implements Runnable {
                         System.out.println(db_response);
                         response_to_client = db_response;
                     }
-
-
-
                     break;
+
                 case "sessions":
                     break;
                 case "packages":
@@ -106,26 +103,26 @@ class ClientHandler implements Runnable {
                 case "tradings":
                     break;
                 default:
-                    System.out.println("wrong Request");
+                    response_to_client = "404 Not Found";
                     break;
             }
 
             // Print request information
             //System.out.println("Request info:" + info + "\n");
-            System.out.println("Request Content:" + content + "\n");
+            //System.out.println("Request Content:" + content + "\n");
 
-
-            writer.println(response_to_client);
-
+            writer.println(response_to_client); // Anser to the Client
 
         } catch (Exception e) {
-            System.out.println("\nError is passiert :(\n");
+            System.out.println("\nAn error occurred :(\n");
             e.printStackTrace();
-        } finally { // closes socket + db connection
+        } finally {
             try {
-                dba.close();
+                if (dba != null) {
+                    dba.close();
+                }
                 socket.close();
-            } catch (IOException e) {
+            } catch (IOException | SQLException e) {
                 e.printStackTrace();
             }
         }

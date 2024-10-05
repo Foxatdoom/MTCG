@@ -18,15 +18,15 @@ public class DbAccess {
         } catch (SQLException e) {
             throw new SQLException(e);
         }
-        System.out.println("Database connection established successfully! \n");
+        //System.out.println("Database connection established successfully! \n");
     }
 
-    public String close(){
+    public String close() throws SQLException {
         if (connection != null) {
             try {
                 connection.close();
             } catch (SQLException e) {
-                return "Error closing the database connection: " + e.getMessage();
+                throw new SQLException(e);
             }
         }
         return "Connection closed successfully";
@@ -61,7 +61,7 @@ public class DbAccess {
             ResultSet resultSet = statement.executeQuery(check); // Execute the query
 
             if (resultSet.next()) { // Check if a result exists
-                return "405 User already exists"; // Username already exists
+                return "HTTP 405 - User already exists"; // Username already exists
             }
         } catch (SQLException e) {
             e.printStackTrace(); // Handle SQL exceptions appropriately
@@ -75,7 +75,7 @@ public class DbAccess {
             preparedStatement.setString(2, password);
             preparedStatement.executeUpdate();
             //return "User created successfully with username: " + username + " and password: " + password;
-            return "200 OK";
+            return "HTTP 201 - OK";
 
         } catch (SQLException e) {
             e.printStackTrace();
