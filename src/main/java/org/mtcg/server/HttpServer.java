@@ -72,7 +72,7 @@ class ClientHandler implements Runnable {
             //System.out.println("request: "+requestParts[0]);
 
             switch(requestParts[0]){
-                case "users":
+                case "users": //aka player
 
                     if(requestParts.length == 2){ // for showing current user
 
@@ -122,6 +122,7 @@ class ClientHandler implements Runnable {
                     dba.close();
                 }
                 socket.close();
+                //System.out.println("Socket closed");
             } catch (IOException | SQLException e) {
                 e.printStackTrace();
             }

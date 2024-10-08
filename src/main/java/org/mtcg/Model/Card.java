@@ -3,16 +3,16 @@ package org.mtcg.Model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Cards {
+public class Card {
     private String id;
     private String name;
     private float damage;
-    private String element_type; // not mentioned in curl??????????????
+    private String element_type; // not mentioned in curl????????
     private String card_type;
 
     // Using @JsonCreator to get curl request correctly
     @JsonCreator
-    public Cards(
+    public Card(
             @JsonProperty("Id") String id,
             @JsonProperty("Name") String name,
             @JsonProperty("Damage") float damage

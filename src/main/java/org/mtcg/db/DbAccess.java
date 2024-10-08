@@ -1,7 +1,7 @@
 package org.mtcg.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.mtcg.Model.Users;
+import org.mtcg.Model.User;
 
 import java.io.IOException;
 import java.sql.*;
@@ -21,7 +21,7 @@ public class DbAccess {
         //System.out.println("Database connection established successfully! \n");
     }
 
-    public String close() throws SQLException {
+    public void close() throws SQLException {
         if (connection != null) {
             try {
                 connection.close();
@@ -29,57 +29,48 @@ public class DbAccess {
                 throw new SQLException(e);
             }
         }
-        return "Connection closed successfully";
+        //System.out.println("DB Connection closed");
     }
 
 
 
     // ---------------------------------- USING DB ---------------------------------
 
-
-
-
-    public String createUser(StringBuilder userdata){
+    public String createUser(StringBuilder playerdata){
         ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
-        Users user = null; // Initialize user variable
+        User user = null; // Initialize player variable
 
         try {
-            // Convert StringBuilder to String and deserialize into User object
-            user = objectMapper.readValue(userdata.toString(), Users.class);
+            // Convert StringBuilder to String and deserialize into Player object
+            user = objectMapper.readValue(playerdata.toString(), User.class);
         } catch (IOException e) {
             e.printStackTrace();
-            return "Error parsing user data";
+            return "Error parsing player data";
         }
 
         String username = user.getUsername();
         String password = user.getPassword();
+        String token = user.getToken();
 
-        // Checking if user already exists
-        String check = "SELECT username FROM users WHERE username = '" + username + "'";
-        try {
-            Statement statement = connection.createStatement(); // Create a Statement object
-            ResultSet resultSet = statement.executeQuery(check); // Execute the query
-
-            if (resultSet.next()) { // Check if a result exists
-                return "HTTP 405 - User already exists"; // Username already exists
-            }
-        } catch (SQLException e) {
-            e.printStackTrace(); // Handle SQL exceptions appropriately
-        }
-
-        // Inserting the user
-        String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+        // Inserting the Player
+        String sql = "INSERT INTO \"user\" (username, password, token) VALUES (?, ?, ?)";
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, username);
             preparedStatement.setString(2, password);
+            preparedStatement.setString(3, token);
             preparedStatement.executeUpdate();
-            //return "User created successfully with username: " + username + " and password: " + password;
+            //return "Player created successfully with name: " + name + " and password: " + password;
             return "HTTP 201 - OK";
 
         } catch (SQLException e) {
-            e.printStackTrace();
-            return "Error creating user: " + e.getMessage();
+            if (e.getMessage().startsWith("ERROR: duplicate key")) {
+                return "HTTP 405 - User already exists";
+            }
+            else {
+                return "HTTP 405 - " + e.getMessage();
+            }
+
         }
     }
 
