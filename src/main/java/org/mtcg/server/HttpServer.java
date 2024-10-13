@@ -2,6 +2,7 @@ package org.mtcg.server;
 
 import org.mtcg.db.DbAccess;
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
@@ -59,58 +60,41 @@ class ClientHandler implements Runnable {
             // Find the first '/' and the first space after it
             int start = info.indexOf("/") + 1;  // Start just after the first '/'
             int end = info.indexOf(" ", start);  // Find the first space after the '/'
+            int extra = info.indexOf(" ");
 
             // Extract the substring
-            String client_request = info.substring(start, end);
+            String client_request_1 = info.substring(0, extra); // post,get,...
+            String client_request_2 = info.substring(start, end); // /users,/deck,...
 
-            String[] requestParts = client_request.split("[/?]"); // for requests like "transactions/packages" and "deck?format=plain"
+            //System.out.println(client_request_1);
+            String[] requestParts = client_request_2.split("[/?]"); // for requests like "transactions/packages" and "deck?format=plain"
 
             dba = new DbAccess();
-
             String response_to_client = "";
 
-            //System.out.println("request: "+requestParts[0]);
 
-            switch(requestParts[0]){
-                case "users": //aka player
+            // dynamically calling functions
+            Class<?>[] paramTypes = {StringBuilder.class, String.class};
+            String db_method = client_request_1 + "_" + requestParts[0];
+            //System.out.println(db_method);
 
-                    if(requestParts.length == 2){ // for showing current user
+            try {
+                Method method = DbAccess.class.getMethod(db_method, paramTypes);
 
-                    }
-                    else { // creating user
-                        String db_response = dba.createUser(content);
-                        System.out.println(db_response);
-                        response_to_client = db_response;
-                    }
-                    break;
+                Object[] methodArgs = {content, requestParts.length > 1 ? requestParts[1] : null};
 
-                case "sessions":
-                    break;
-                case "packages":
-                    break;
-                case "transactions":
-                    break;
-                case "cards":
-                    break;
-                case "deck":
-                    break;
-                case "stats":
-                    break;
-                case "scoreboard":
-                    break;
-                case "battles":
-                    break;
-                case "tradings":
-                    break;
-                default:
-                    response_to_client = "404 Not Found";
-                    break;
+                response_to_client = (String) method.invoke(dba, methodArgs);
+            }
+            catch (NoSuchMethodException e) {
+                response_to_client = "404 Not Found";
+            } catch (IllegalAccessException e) {
+                response_to_client = "403 Access denied";
             }
 
             // Print request information
             //System.out.println("Request info:" + info + "\n");
             //System.out.println("Request Content:" + content + "\n");
-
+            System.out.println(response_to_client);
             writer.println(response_to_client); // Anser to the Client
 
         } catch (Exception e) {
