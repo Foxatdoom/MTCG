@@ -37,17 +37,7 @@ public class DbAccess {
 
     // ------------ POST --------------
 
-    public String POST_users(StringBuilder data, String additional_request){ //aka register
-        ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
-        User user = null; // Initialize player variable
-
-        try {
-            // Convert StringBuilder to String and deserialize into Player object
-            user = objectMapper.readValue(data.toString(), User.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "HTTP 400 - Error parsing player data";
-        }
+    public String POST_users(User user){ //aka register
 
         String username = user.getUsername();
         String password = user.getPassword();
@@ -62,14 +52,14 @@ public class DbAccess {
             preparedStatement.setString(3, token);
             preparedStatement.executeUpdate();
             //return "Player created successfully with name: " + name + " and password: " + password;
-            return "HTTP 201 - OK";
+            return "HTTP/1.0201 - OK";
 
         } catch (SQLException e) {
             if (e.getMessage().startsWith("ERROR: duplicate key")) {
-                return "HTTP 405 - User already exists";
+                return "HTTP/1.0405 - User already exists";
             }
             else {
-                return "HTTP 405 - " + e.getMessage();
+                return "HTTP/1.0405 - " + e.getMessage();
             }
         }
     }
@@ -83,7 +73,7 @@ public class DbAccess {
             user = objectMapper.readValue(data.toString(), User.class);
         } catch (IOException e) {
             e.printStackTrace();
-            return "HTTP 400 - Error parsing player data";
+            return "HTTP/1.0400 - Error parsing player data";
         }
 
         String username = user.getUsername();
@@ -95,10 +85,10 @@ public class DbAccess {
             preparedStatement.setString(1, username);
             preparedStatement.setString(2, password);
             ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) return "HTTP 201 - " + resultSet.getString("token");
-            else return "HTTP 401 - Login failed";
+            if (resultSet.next()) return "HTTP/1.0201 - " + resultSet.getString("token");
+            else return "HTTP/1.0401 - Login failed";
         } catch (SQLException e) {
-            return "HTTP 400 - " + e.getMessage();
+            return "HTTP/1.0400 - " + e.getMessage();
         }
     }
 

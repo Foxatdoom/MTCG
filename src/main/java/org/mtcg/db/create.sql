@@ -1,5 +1,5 @@
 -- Connect to the mtcg_db database
-\c mtcg_db;
+\c public;
 
 -- Drop existing tables if they exist (for fresh setup)
 DROP TABLE IF EXISTS battle CASCADE;
