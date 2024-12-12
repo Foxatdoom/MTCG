@@ -1,10 +1,14 @@
 package org.mtcg.handler;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mtcg.Model.Card;
+import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
 import org.mtcg.db.DbAccess;
 
 import java.io.IOException;
+import java.util.List;
 
 public class POST_Handler {
 
@@ -26,8 +30,8 @@ public class POST_Handler {
         // Extract the substring
         String method = info.substring(start, end); // /users,/deck,...
 
-        System.out.println("method: " + method);
-        System.out.println("content: " + content);
+        //System.out.println("method: " + method);
+        //System.out.println("content: " + content);
 
         String[] requestParts = method.split("[/?]"); // for requests like "transactions/packages" and "deck?format=plain"
 
@@ -39,10 +43,12 @@ public class POST_Handler {
 
 
                 case "sessions":
+                    response_to_client = this.sessions(content);
                     break;
 
 
                 case "packages":
+                    response_to_client = this.packages(content);
                     break;
 
 
@@ -75,10 +81,53 @@ public class POST_Handler {
             user = objectMapper.readValue(content.toString(), User.class);
         } catch (IOException e) {
             e.printStackTrace();
-            return "HTTP/1.0400 - Error parsing player data";
+            return "HTTP/1.1 400 - Error parsing player data";
         }
 
         return dba.POST_users(user);
+    }
+
+    public String sessions(StringBuilder content){
+        ObjectMapper objectMapper = new ObjectMapper();
+        User user = null; // Initialize player variable
+
+        try {
+            // Convert StringBuilder to String and deserialize into Player object
+            user = objectMapper.readValue(content.toString(), User.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "HTTP/1.1 400 - Error parsing player data";
+        }
+        return dba.POST_sessions(user);
+    }
+
+    public String packages(StringBuilder content){
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Card> cards;
+
+        // I also need to create Element and type based in the name of the card !!!!!!!
+
+        try {
+            // Convert StringBuilder to String and deserialize into a list of Card objects
+            cards = objectMapper.readValue(content.toString(), new TypeReference<List<Card>>() {});
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "HTTP/1.1 400 - Error parsing card data";
+        }
+
+        Package p;
+
+        try {
+            // Convert StringBuilder to String and deserialize into Player object
+            p = objectMapper.readValue(content.toString(), Package.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "HTTP/1.1 400 - Error parsing package data";
+        }
+
+
+
+        return dba.POST_packages(p);
     }
 
 }

@@ -9,23 +9,28 @@ import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class HttpServer {
+    private static final int PORT = 10001;
+    private static final int THREAD_POOL_SIZE = 10; // Number of threads in the pool
+
     public static void main(String[] args) {
+        ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE); // Create a fixed thread pool
 
-        int port = 10001;
-
-        try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            serverSocket.setReuseAddress(true); // Port sofort wiederverwendbar machen
-            System.out.println("Server is listening on port " + port);
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            serverSocket.setReuseAddress(true); // Make the port reusable immediately
+            System.out.println("Server is listening on port " + PORT);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                new Thread(new ClientHandler(clientSocket)).start();
+                threadPool.execute(new ClientHandler(clientSocket)); // Submit the task to the thread pool
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            threadPool.shutdown(); // Shut down the thread pool gracefully when done
         }
     }
 }
@@ -83,6 +88,7 @@ class ClientHandler implements Runnable {
 
             }
 
+            // old version
             else {
 
                 // Find the first '/' and the first space after it

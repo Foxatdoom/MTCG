@@ -20,6 +20,28 @@ public class Card {
         this.id = id;
         this.name = name;
         this.damage = damage;
+
+        // if the first letters of name "Regular" (or nothing), "Fire", or "Water" -> element_type
+        if(name.startsWith("Fire")){
+            this.element_type = "Fire";
+        }
+        else if(name.startsWith("Water")){
+            this.element_type = "Water";
+        }
+        else {
+            this.element_type = "Regular";
+        }
+
+        //if last letter "Spell" -> card_type
+        if(name.endsWith("Spell")){
+            this.card_type = "Spell";
+        }
+        else {
+            this.card_type = "Monster";
+        }
+
+
+
     }
 
     // GETTER-Methods

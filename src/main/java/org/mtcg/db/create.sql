@@ -46,7 +46,7 @@ CREATE TABLE stack_card (
 -- Create a table for Package
 CREATE TABLE package (
     package_id SERIAL PRIMARY KEY,
-    user_id SERIAL REFERENCES "user"(user_id) ON DELETE CASCADE
+    user_id INTEGER REFERENCES "user"(user_id) ON DELETE CASCADE
 );
 
 -- Create a junction table for Cards in a Package
