@@ -2,6 +2,7 @@ package org.mtcg.handler;
 
 import org.mtcg.db.DbAccess;
 
+import java.io.PrintWriter;
 import java.sql.SQLException;
 
 public class Router {
@@ -23,36 +24,33 @@ public class Router {
     }
 
 
-    public String call_handler(StringBuilder info, StringBuilder content){
+    public void call_handler(StringBuilder info, StringBuilder content, PrintWriter writer){
 
         //System.out.println("calling handler");
-
-        String response_to_client = "";
 
         String spezific_request = info.substring(0, info.indexOf(" ")); // post,get,...
 
         switch (spezific_request){
             case "POST":
-                response_to_client = post.call_request(info, content);
+                post.call_request(info, content, writer);
                 break;
 
 
             case "GET":
-                //get.call_request(info, content);
+                //get.call_request(info, content, writer);
                 break;
 
 
 
             case "PUT":
-                //put.call_request(info, content);
+                //put.call_request(info, content, writer);
                 break;
 
 
 
             case "DELETE":
-                //del.call_request(info, content);
+                //del.call_request(info, content, writer);
                 break;
         }
-        return response_to_client;
     }
 }

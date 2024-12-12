@@ -8,6 +8,7 @@ import org.mtcg.Model.User;
 import org.mtcg.db.DbAccess;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 
 public class POST_Handler {
@@ -18,7 +19,7 @@ public class POST_Handler {
         this.dba = dba;
     }
 
-    public String call_request(StringBuilder info, StringBuilder content){
+    public void call_request(StringBuilder info, StringBuilder content, PrintWriter writer){
 
         //System.out.println("calling request");
 
@@ -38,17 +39,17 @@ public class POST_Handler {
         if(requestParts.length == 1){
             switch (requestParts[0]){
                 case "users":
-                    response_to_client = this.users(content);
+                    this.users(content, writer);
                     break;
 
 
                 case "sessions":
-                    response_to_client = this.sessions(content);
+                    this.sessions(content, writer);
                     break;
 
 
                 case "packages":
-                    response_to_client = this.packages(content);
+                    this.packages(content, writer);
                     break;
 
 
@@ -67,11 +68,9 @@ public class POST_Handler {
         else {
             // special requests like "transactions/packages" and "deck?format=plain"
         }
-
-        return response_to_client;
     }
 
-    public String users(StringBuilder content){
+    public void users(StringBuilder content, PrintWriter writer){
 
         ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
         User user = null; // Initialize player variable
@@ -80,14 +79,14 @@ public class POST_Handler {
             // Convert StringBuilder to String and deserialize into Player object
             user = objectMapper.readValue(content.toString(), User.class);
         } catch (IOException e) {
-            e.printStackTrace();
-            return "HTTP/1.1 400 - Error parsing player data";
+            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing player data");
+            return;
         }
 
-        return dba.POST_users(user);
+        dba.POST_users(user, writer);
     }
 
-    public String sessions(StringBuilder content){
+    public void sessions(StringBuilder content, PrintWriter writer){
         ObjectMapper objectMapper = new ObjectMapper();
         User user = null; // Initialize player variable
 
@@ -95,13 +94,13 @@ public class POST_Handler {
             // Convert StringBuilder to String and deserialize into Player object
             user = objectMapper.readValue(content.toString(), User.class);
         } catch (IOException e) {
-            e.printStackTrace();
-            return "HTTP/1.1 400 - Error parsing player data";
+            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing session data");
+            return;
         }
-        return dba.POST_sessions(user);
+        dba.POST_sessions(user, writer);
     }
 
-    public String packages(StringBuilder content){
+    public void packages(StringBuilder content, PrintWriter writer){
         ObjectMapper objectMapper = new ObjectMapper();
         List<Card> cards;
 
@@ -111,8 +110,8 @@ public class POST_Handler {
             // Convert StringBuilder to String and deserialize into a list of Card objects
             cards = objectMapper.readValue(content.toString(), new TypeReference<List<Card>>() {});
         } catch (IOException e) {
-            e.printStackTrace();
-            return "HTTP/1.1 400 - Error parsing card data";
+            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing card data");
+            return;
         }
 
         Package p;
@@ -121,13 +120,13 @@ public class POST_Handler {
             // Convert StringBuilder to String and deserialize into Player object
             p = objectMapper.readValue(content.toString(), Package.class);
         } catch (IOException e) {
-            e.printStackTrace();
-            return "HTTP/1.1 400 - Error parsing package data";
+            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing package data");
+            return;
         }
 
 
 
-        return dba.POST_packages(p);
+        dba.POST_packages(p, writer);
     }
 
 }

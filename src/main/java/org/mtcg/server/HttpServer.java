@@ -1,5 +1,6 @@
 package org.mtcg.server;
 
+import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
 import org.mtcg.handler.ResponseHandler;
 import org.mtcg.handler.Router;
@@ -53,7 +54,7 @@ class ClientHandler implements Runnable {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(input)); // -> curl script
 
                 OutputStream output = socket.getOutputStream();
-                PrintWriter writer = new PrintWriter(output, true)
+                MyPrintWriter writer = new MyPrintWriter(output, true)
         ) {
 
             // Request info
@@ -80,11 +81,11 @@ class ClientHandler implements Runnable {
 
             if(use_corrected_project){
                 r = new Router();
-                response_to_client =  r.call_handler(info, content);
+                r.call_handler(info, content, writer);
 
-
-                rh = new ResponseHandler(writer);
-                rh.respond(response_to_client);
+                writer.flush();
+                //rh = new ResponseHandler(writer);
+                //rh.respond(response_to_client);
 
             }
 

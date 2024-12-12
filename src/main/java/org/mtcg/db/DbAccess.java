@@ -6,6 +6,7 @@ import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +42,7 @@ public class DbAccess {
 
     // ------------ POST --------------
 
-    public String POST_users(User user){ //aka register
+    public void POST_users(User user, PrintWriter writer){ //aka register
 
         String username = user.getUsername();
         String password = user.getPassword();
@@ -56,19 +57,20 @@ public class DbAccess {
             preparedStatement.setString(3, token);
             preparedStatement.executeUpdate();
             //return "Player created successfully with name: " + name + " and password: " + password;
-            return "HTTP/1.1 201 - OK";
+            writer.println("HTTP/1.1 201\r\nContent-Type: text/plain\r\nOK");
 
         } catch (SQLException e) {
             if (e.getMessage().startsWith("ERROR: duplicate key")) {
-                return "HTTP/1.1 405 - User already exists";
+
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\nUser already exists");
             }
             else {
-                return "HTTP/1.1 405 - " + e.getMessage();
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\nLogin Failed");
             }
         }
     }
 
-    public String POST_sessions(User user){ //aka login
+    public void POST_sessions(User user, PrintWriter writer){ //aka login
 
 
         String username = user.getUsername();
@@ -80,14 +82,18 @@ public class DbAccess {
             preparedStatement.setString(1, username);
             preparedStatement.setString(2, password);
             ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) return "HTTP/1.0201 - " + resultSet.getString("token");
-            else return "HTTP/1.1 401 - Login failed";
+            if (resultSet.next()){
+                writer.println("HTTP/1.1 201\r\nContent-Type: text/plain\r\n" + resultSet.getString("token"));
+            }
+            else{
+                writer.println("HTTP/1.1 401\r\nContent-Type: text/plain\r\nLogin Failed");
+            }
         } catch (SQLException e) {
-            return "HTTP/1.1 400 - " + e.getMessage();
+            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\n" + e.getMessage());
         }
     }
 
-    public String POST_packages(Package p){
+    public void POST_packages(Package p, PrintWriter writer){
         List<Card> cards = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             cards.set(i, p.getSpecificCard(i));
@@ -112,7 +118,8 @@ public class DbAccess {
             package_id = rs_package.getInt(1);
 
         } catch (SQLException e) {
-            return "HTTP/1.1 405 - " + e.getMessage();
+            writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage());
+            return;
         }
 
         String name = "";
@@ -142,7 +149,8 @@ public class DbAccess {
                 card_id = rs_card.getInt(1);
 
             } catch (SQLException e) {
-                return "HTTP/1.1 405 - " + e.getMessage();
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage());
+                return;
             }
 
             // inserting package card (connection). how to get id ?????????????
@@ -156,10 +164,11 @@ public class DbAccess {
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
-                return "HTTP/1.1 405 - " + e.getMessage();
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage());
+                return;
             }
         }
-            return "HTTP/1.1 201 - OK";
+        writer.println("HTTP/1.1 201 - OK");
     }
 
     public String POST_transactions(StringBuilder data, String additional_request){
