@@ -10,6 +10,13 @@ import java.io.PrintWriter;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.UUID;
 
 public class DbAccess {
 
@@ -120,6 +127,8 @@ public class DbAccess {
             return;
         }
 
+        // System.out.println(package_id);
+
         String name = "";
         float damage = 0f;
         String element_type = "";
@@ -134,17 +143,21 @@ public class DbAccess {
 
             String sql_card = "INSERT INTO card (name, damage, element_type, card_type) VALUES (?, ?, ?, ?)";
 
-            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_card)) {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_card, Statement.RETURN_GENERATED_KEYS)) {
                 preparedStatement.setString(1, name);
                 preparedStatement.setFloat(2, damage);
                 preparedStatement.setString(3, element_type);
                 preparedStatement.setString(4, card_type);
                 preparedStatement.executeUpdate();
 
-                // Retrieve the generated card id
-                ResultSet rs_card = preparedStatement.getGeneratedKeys();
-                rs_card.next();
-                card_id = rs_card.getString(1);
+                // Retrieve the generated package ID
+                try (ResultSet rs_card = preparedStatement.getGeneratedKeys()) {
+                    if (rs_card.next()) {  // Move to the first row
+                        card_id = rs_card.getString(1); // Get the first column of the result
+                    } else {
+                        throw new SQLException("No generated keys returned for card.");
+                    }
+                }
 
             } catch (SQLException e) {
                 writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting cards)");
@@ -152,17 +165,18 @@ public class DbAccess {
             }
 
             // inserting package card (connection). how to get id ?????????????
-
+            UUID pi = UUID.fromString(package_id);
+            UUID ci = UUID.fromString(card_id);
 
             String sql_package_card = "INSERT INTO package_card (package_id, card_id) VALUES (?, ?)";
 
-            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                preparedStatement.setString(0, package_id); // set SERIAL ????
-                preparedStatement.setString(1, card_id);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_package_card)) {
+                preparedStatement.setObject(1, pi);
+                preparedStatement.setObject(2, ci);
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting package cards)");
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting package_cards)");
                 return;
             }
         }

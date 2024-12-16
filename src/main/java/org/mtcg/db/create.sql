@@ -29,7 +29,7 @@ CREATE TABLE card (
     card_id UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
     name VARCHAR(100) NOT NULL,
     damage FLOAT NOT NULL CHECK (damage >= 0),
-    element_type VARCHAR(50) NOT NULL CHECK (element_type IN ('Fire', 'Water', 'Normal')),
+    element_type VARCHAR(50) NOT NULL CHECK (element_type IN ('Fire', 'Water', 'Regular')),
     card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('Spell', 'Monster'))
 );
 
