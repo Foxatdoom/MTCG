@@ -101,32 +101,44 @@ public class POST_Handler {
     }
 
     public void packages(StringBuilder content, PrintWriter writer){
+        // ObjectMapper instance
         ObjectMapper objectMapper = new ObjectMapper();
-        List<Card> cards;
-
-        // I also need to create Element and type based in the name of the card !!!!!!!
-
-        try {
-            // Convert StringBuilder to String and deserialize into a list of Card objects
-            cards = objectMapper.readValue(content.toString(), new TypeReference<List<Card>>() {});
-        } catch (IOException e) {
-            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing card data");
-            return;
-        }
-
-        Package p;
+        Package pack = null;
+        List<Card> cardList = null;
 
         try {
-            // Convert StringBuilder to String and deserialize into Player object
-            p = objectMapper.readValue(content.toString(), Package.class);
+            cardList = objectMapper.readValue(content.toString(), new TypeReference<List<Card>>() {});
+
+            // package is always 5
+            if (cardList.size() == 5) {
+                pack = new Package(
+                    cardList.get(0),
+                    cardList.get(1),
+                    cardList.get(2),
+                    cardList.get(3),
+                    cardList.get(4)
+                );
+
+                // Print Package details
+                for (Card card : pack.getPackageCards()) {
+                    System.out.println("Card: " + card.getName() +
+                            ", Type: " + card.getCard_type() +
+                            ", Element: " + card.getElement_type() +
+                            ", Damage: " + card.getDamage());
+                }
+
+            } else {
+                writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nInvalid number of cards in JSON. Expected 5 cards.");
+                return;
+            }
+
         } catch (IOException e) {
-            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing package data");
-            return;
+            e.printStackTrace();
         }
 
 
 
-        dba.POST_packages(p, writer);
+        dba.POST_packages(cardList, writer);
     }
 
 }

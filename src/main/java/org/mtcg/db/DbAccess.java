@@ -93,32 +93,30 @@ public class DbAccess {
         }
     }
 
-    public void POST_packages(Package p, PrintWriter writer){
-        List<Card> cards = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            cards.set(i, p.getSpecificCard(i));
-        }
+    public void POST_packages(List<Card> cards, PrintWriter writer){
 
+        String card_id = "";
+        String package_id = "";
 
-
-        // Inserting empty package
-
-        int package_id = 0;
-        int card_id = 0;
-
+        // Inserting package with no owner yet (user_id set to null)
         String sql = "INSERT INTO package (user_id) VALUES (?)";
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, null);
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            preparedStatement.setNull(1, java.sql.Types.OTHER); // Set NULL for user_id
             preparedStatement.executeUpdate();
 
-            // Retrieve the generated package id
-            ResultSet rs_package = preparedStatement.getGeneratedKeys();
-            rs_package.next();
-            package_id = rs_package.getInt(1);
+            // Retrieve the generated package ID
+            try (ResultSet rs_package = preparedStatement.getGeneratedKeys()) {
+                if (rs_package.next()) {  // Move to the first row
+                    package_id = rs_package.getString(1); // Get the first column of the result
+                } else {
+                    throw new SQLException("No generated keys returned for package.");
+                }
+            }
 
         } catch (SQLException e) {
-            writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage());
+            writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting package)");
             return;
         }
 
@@ -136,7 +134,7 @@ public class DbAccess {
 
             String sql_card = "INSERT INTO card (name, damage, element_type, card_type) VALUES (?, ?, ?, ?)";
 
-            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_card)) {
                 preparedStatement.setString(1, name);
                 preparedStatement.setFloat(2, damage);
                 preparedStatement.setString(3, element_type);
@@ -146,10 +144,10 @@ public class DbAccess {
                 // Retrieve the generated card id
                 ResultSet rs_card = preparedStatement.getGeneratedKeys();
                 rs_card.next();
-                card_id = rs_card.getInt(1);
+                card_id = rs_card.getString(1);
 
             } catch (SQLException e) {
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage());
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting cards)");
                 return;
             }
 
@@ -159,12 +157,12 @@ public class DbAccess {
             String sql_package_card = "INSERT INTO package_card (package_id, card_id) VALUES (?, ?)";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                preparedStatement.setFloat(0, package_id); // set SERIAL ????
-                preparedStatement.setFloat(1, card_id);
+                preparedStatement.setString(0, package_id); // set SERIAL ????
+                preparedStatement.setString(1, card_id);
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage());
+                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting package cards)");
                 return;
             }
         }
