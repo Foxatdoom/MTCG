@@ -83,7 +83,7 @@ class ClientHandler implements Runnable {
                 r = new Router();
                 r.call_handler(info, content, writer);
 
-                writer.flush();
+                //writer.flush();
                 //rh = new ResponseHandler(writer);
                 //rh.respond(response_to_client);
 

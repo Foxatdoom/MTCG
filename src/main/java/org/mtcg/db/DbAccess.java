@@ -1,22 +1,15 @@
 package org.mtcg.db;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtcg.Model.Card;
-import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
-
-import java.io.IOException;
-import java.io.PrintWriter;
+import org.mtcg.MyPrintWriter;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.UUID;
 
 public class DbAccess {
 
@@ -49,7 +42,7 @@ public class DbAccess {
 
     // ------------ POST --------------
 
-    public void POST_users(User user, PrintWriter writer){ //aka register
+    public void POST_users(User user, MyPrintWriter writer){ //aka register
 
         String username = user.getUsername();
         String password = user.getPassword();
@@ -64,20 +57,20 @@ public class DbAccess {
             preparedStatement.setString(3, token);
             preparedStatement.executeUpdate();
             //return "Player created successfully with name: " + name + " and password: " + password;
-            writer.println("HTTP/1.1 201\r\nContent-Type: text/plain\r\nOK");
+            writer.println(201,"OK");
 
         } catch (SQLException e) {
             if (e.getMessage().startsWith("ERROR: duplicate key")) {
 
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\nUser already exists");
+                writer.println(405, "User already exists");
             }
             else {
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\nLogin Failed");
+                writer.println(405, "Login Failed");
             }
         }
     }
 
-    public void POST_sessions(User user, PrintWriter writer){ //aka login
+    public void POST_sessions(User user, MyPrintWriter writer){ //aka login
 
 
         String username = user.getUsername();
@@ -90,17 +83,17 @@ public class DbAccess {
             preparedStatement.setString(2, password);
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()){
-                writer.println("HTTP/1.1 201\r\nContent-Type: text/plain\r\n" + resultSet.getString("token"));
+                writer.println(201, resultSet.getString("token"));
             }
             else{
-                writer.println("HTTP/1.1 401\r\nContent-Type: text/plain\r\nLogin Failed");
+                writer.println(401, "Login Failed");
             }
         } catch (SQLException e) {
-            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\n" + e.getMessage());
+            writer.println(400, e.getMessage());
         }
     }
 
-    public void POST_packages(List<Card> cards, PrintWriter writer){
+    public void POST_packages(List<Card> cards, MyPrintWriter writer){
 
         String card_id = "";
         String package_id = "";
@@ -118,12 +111,12 @@ public class DbAccess {
                 if (rs_package.next()) {  // Move to the first row
                     package_id = rs_package.getString(1); // Get the first column of the result
                 } else {
-                    throw new SQLException("No generated keys returned for package.");
+                    writer.println(500, "No generated keys returned for package");
                 }
             }
 
         } catch (SQLException e) {
-            writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting package)");
+            writer.println(405,e.getMessage() + " (by inserting package)");
             return;
         }
 
@@ -155,12 +148,12 @@ public class DbAccess {
                     if (rs_card.next()) {  // Move to the first row
                         card_id = rs_card.getString(1); // Get the first column of the result
                     } else {
-                        throw new SQLException("No generated keys returned for card.");
+                        writer.println(500, "No generated keys returned for card");
                     }
                 }
 
             } catch (SQLException e) {
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting cards)");
+                writer.println(405,e.getMessage() + " (by inserting cards)");
                 return;
             }
 
@@ -176,11 +169,11 @@ public class DbAccess {
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
-                writer.println("HTTP/1.1 405\r\nContent-Type: text/plain\r\n" + e.getMessage() + " (by inserting package_cards)");
+                writer.println(405,e.getMessage() + " (by inserting package_cards)");
                 return;
             }
         }
-        writer.println("HTTP/1.1 201 - OK");
+        writer.println(201, "OK");
     }
 
     public String POST_transactions(StringBuilder data, String additional_request){

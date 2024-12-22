@@ -1,8 +1,7 @@
 package org.mtcg.handler;
 
+import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
-
-import java.io.PrintWriter;
 import java.sql.SQLException;
 
 public class Router {
@@ -24,7 +23,7 @@ public class Router {
     }
 
 
-    public void call_handler(StringBuilder info, StringBuilder content, PrintWriter writer){
+    public void call_handler(StringBuilder info, StringBuilder content, MyPrintWriter writer){
 
         //System.out.println("calling handler");
 

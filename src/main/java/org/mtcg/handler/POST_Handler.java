@@ -5,10 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtcg.Model.Card;
 import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
+import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
-
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 
 public class POST_Handler {
@@ -19,7 +18,7 @@ public class POST_Handler {
         this.dba = dba;
     }
 
-    public void call_request(StringBuilder info, StringBuilder content, PrintWriter writer){
+    public void call_request(StringBuilder info, StringBuilder content, MyPrintWriter writer){
 
         //System.out.println("calling request");
 
@@ -70,7 +69,7 @@ public class POST_Handler {
         }
     }
 
-    public void users(StringBuilder content, PrintWriter writer){
+    public void users(StringBuilder content, MyPrintWriter writer){
 
         ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
         User user = null; // Initialize player variable
@@ -79,14 +78,14 @@ public class POST_Handler {
             // Convert StringBuilder to String and deserialize into Player object
             user = objectMapper.readValue(content.toString(), User.class);
         } catch (IOException e) {
-            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing player data");
+            writer.println(400, "Error parsing player data");
             return;
         }
 
         dba.POST_users(user, writer);
     }
 
-    public void sessions(StringBuilder content, PrintWriter writer){
+    public void sessions(StringBuilder content, MyPrintWriter writer){
         ObjectMapper objectMapper = new ObjectMapper();
         User user = null; // Initialize player variable
 
@@ -94,13 +93,13 @@ public class POST_Handler {
             // Convert StringBuilder to String and deserialize into Player object
             user = objectMapper.readValue(content.toString(), User.class);
         } catch (IOException e) {
-            writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nError parsing session data");
+            writer.println(400, "Error parsing session data");
             return;
         }
         dba.POST_sessions(user, writer);
     }
 
-    public void packages(StringBuilder content, PrintWriter writer){
+    public void packages(StringBuilder content, MyPrintWriter writer){
         // ObjectMapper instance
         ObjectMapper objectMapper = new ObjectMapper();
         Package pack = null;
@@ -128,7 +127,7 @@ public class POST_Handler {
                 }
 
             } else {
-                writer.println("HTTP/1.1 400\r\nContent-Type: text/plain\r\nInvalid number of cards in JSON. Expected 5 cards.");
+                writer.println(400, "Invalid number of cards in JSON. Expected 5 cards.");
                 return;
             }
 
