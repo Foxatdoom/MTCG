@@ -83,7 +83,7 @@ public class DbAccess {
             preparedStatement.setString(2, password);
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()){
-                writer.println(201, resultSet.getString("token"));
+                writer.println(200, resultSet.getString("token"));
             }
             else{
                 writer.println(401, "Login Failed");
@@ -157,7 +157,6 @@ public class DbAccess {
                 return;
             }
 
-            // inserting package card (connection). how to get id ?????????????
             UUID pi = UUID.fromString(package_id);
             UUID ci = UUID.fromString(card_id);
 
@@ -173,7 +172,7 @@ public class DbAccess {
                 return;
             }
         }
-        writer.println(201, "OK");
+        writer.println(201, "Package added");
     }
 
     public String POST_transactions(StringBuilder data, String additional_request){

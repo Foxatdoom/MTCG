@@ -9,6 +9,9 @@ import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class POST_Handler {
 
@@ -20,56 +23,69 @@ public class POST_Handler {
 
     public void call_request(StringBuilder info, StringBuilder content, MyPrintWriter writer){
 
-        //System.out.println("calling request");
+        //System.out.println("post_handler");
+        //System.out.println("info: "+info.toString());
+        //System.out.println("content: "+content.toString());
 
-        String response_to_client = "";
+        String auth = "";
+        String paths = "";
+        String[] path_parts = null; // the first one is always null because every path starts with / !!!!!!
 
-        int start = info.indexOf("/") + 1;  // Start just after the first '/'
-        int end = info.indexOf(" ", start);  // Find the first space after the '/'
-
-        // Extract the substring
-        String method = info.substring(start, end); // /users,/deck,...
-
-        //System.out.println("method: " + method);
-        //System.out.println("content: " + content);
-
-        String[] requestParts = method.split("[/?]"); // for requests like "transactions/packages" and "deck?format=plain"
-
-        if(requestParts.length == 1){
-            switch (requestParts[0]){
-                case "users":
-                    this.users(content, writer);
-                    break;
-
-
-                case "sessions":
-                    this.sessions(content, writer);
-                    break;
-
-
-                case "packages":
-                    this.packages(content, writer);
-                    break;
-
-
-                case "transactions":
-                    break;
-
-
-                case "battles":
-                    break;
-
-
-                case "tradings":
-                    break;
-            }
+        // Extract path (starts with / and ends at whitespace)
+        Pattern pathPattern = Pattern.compile("\\s(/\\S+)");
+        Matcher pathMatcher = pathPattern.matcher(info.toString());
+        if (pathMatcher.find()) {
+            paths = pathMatcher.group(1);
+            path_parts = paths.split("[/?]"); //splits by / or ?
         }
-        else {
-            // special requests like "transactions/packages" and "deck?format=plain"
+
+        // Extract token
+        Pattern authTokenPattern = Pattern.compile("Authorization: Bearer (\\S+)");
+        Matcher authTokenMatcher = authTokenPattern.matcher(info.toString());
+        if (authTokenMatcher.find()) {
+            auth = authTokenMatcher.group(1);
+        }
+
+        //System.out.println("infos: " + auth + " " + paths + " " + path_parts[1]);
+
+        switch (path_parts[1]){
+            case "users":
+                if(path_parts.length > 2) this.edit_users(auth, path_parts[1], content, writer);
+                else this.add_users(content, writer);
+                break;
+
+
+            case "sessions":
+                this.sessions(content, writer);
+                break;
+
+
+            case "packages":
+                this.packages(auth, content, writer);
+                break;
+
+
+            case "transactions":
+                if(Objects.equals(path_parts[2], "packages")) this.transactions(auth, writer);
+                break;
+
+
+            case "battles":
+                this.battles(auth, writer);
+                break;
+
+
+            case "tradings":
+                if(path_parts.length > 2) this.spezific_tradings(auth, path_parts[1], content, writer);
+                else this.tradings(auth, content, writer);
+                break;
         }
     }
 
-    public void users(StringBuilder content, MyPrintWriter writer){
+
+
+
+    public void add_users(StringBuilder content, MyPrintWriter writer){
 
         ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
         User user = null; // Initialize player variable
@@ -83,6 +99,10 @@ public class POST_Handler {
         }
 
         dba.POST_users(user, writer);
+    }
+
+    public void edit_users(String auth, String what_user, StringBuilder content, MyPrintWriter writer){
+        // 14) todo
     }
 
     public void sessions(StringBuilder content, MyPrintWriter writer){
@@ -99,7 +119,8 @@ public class POST_Handler {
         dba.POST_sessions(user, writer);
     }
 
-    public void packages(StringBuilder content, MyPrintWriter writer){
+    public void packages(String auth, StringBuilder content, MyPrintWriter writer){
+        if(!Objects.equals(auth, "admin-mtcgToken")) writer.println(401, "Not Admin");
         // ObjectMapper instance
         ObjectMapper objectMapper = new ObjectMapper();
         Package pack = null;
@@ -119,25 +140,39 @@ public class POST_Handler {
                 );
 
                 // Print Package details
-                for (Card card : pack.getPackageCards()) {
+                /*for (Card card : pack.getPackageCards()) {
                     System.out.println("Card: " + card.getName() +
                             ", Type: " + card.getCard_type() +
                             ", Element: " + card.getElement_type() +
                             ", Damage: " + card.getDamage());
-                }
+                }*/
 
             } else {
                 writer.println(400, "Invalid number of cards in JSON. Expected 5 cards.");
                 return;
             }
-
         } catch (IOException e) {
-            e.printStackTrace();
+            writer.println(400, e.getMessage());
         }
 
-
-
         dba.POST_packages(cardList, writer);
+    }
+
+    private void transactions(String auth, MyPrintWriter writer) {
+        // 4) todo
+
+    }
+
+    private void battles(String auth, MyPrintWriter writer) {
+        // 17) todo
+    }
+
+    private void tradings(String auth, StringBuilder content, MyPrintWriter writer) {
+        // 20) todo
+    }
+
+    private void spezific_tradings(String auth, String pathPart, StringBuilder content, MyPrintWriter writer) {
+        // 20) todo
     }
 
 }
