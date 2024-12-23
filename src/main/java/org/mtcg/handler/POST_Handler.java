@@ -160,7 +160,7 @@ public class POST_Handler {
 
     private void transactions(String auth, MyPrintWriter writer) {
         // 4) todo
-
+        dba.POST_transactions(auth, writer);
     }
 
     private void battles(String auth, MyPrintWriter writer) {

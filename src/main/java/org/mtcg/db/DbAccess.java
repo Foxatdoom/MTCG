@@ -175,8 +175,102 @@ public class DbAccess {
         writer.println(201, "Package added");
     }
 
-    public String POST_transactions(StringBuilder data, String additional_request){
-        return "POST_transactions";
+    public void POST_transactions(String auth, MyPrintWriter writer){
+
+        String user_id = "";
+
+        //step 1: get user_id from auth
+        String sql_get_id = "SELECT * FROM \"user\" WHERE token = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_id)) {
+            preparedStatement.setString(1, auth);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Process ResultSet
+                while (resultSet.next()) {
+                    user_id = resultSet.getString("user_id");
+                }
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404, "user not found");
+            return;
+        }
+
+        //step 2: check if >= 5 coins
+        String sql_check_coins = "SELECT coins FROM \"user\" WHERE user_id = ? AND coins > 4";
+
+        UUID uuid = UUID.fromString(user_id);
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_check_coins)) {
+            preparedStatement.setObject(1, uuid);
+
+            // Use executeQuery for SELECT statements
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) { // Check if a result exists
+                    //System.out.println("got enough money");
+                } else {
+                    writer.println(403, "Not enough Money");
+                    return;
+                }
+            }
+        } catch (SQLException e) {
+            writer.println(400, e.getMessage() + " (step 2)");
+            return;
+        }
+
+
+        //step 3: check if packages available
+        String sql_check_packages = "SELECT COUNT(*) FROM package WHERE user_id IS NULL";
+
+        try (PreparedStatement packageStmt = connection.prepareStatement(sql_check_packages)) {
+            try (ResultSet rs = packageStmt.executeQuery()) {
+                if (rs.next()) {
+                    if(rs.getInt(1) < 1){
+                        writer.println(403, "No packages available");
+                        return;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            writer.println(400, e.getMessage() + " (step 3)");
+            return;
+        }
+
+        // Step 4.1: Decrease user's coins by 5
+        String sql_decrease_coins = "UPDATE \"user\" SET coins = coins - 5 WHERE token = ?";
+
+        // Step 4.2: Assign a random package to the user
+        String sql_assign_package = "UPDATE package SET user_id = ? WHERE package_id = (" +
+                "SELECT package_id FROM package WHERE user_id IS NULL LIMIT 1)";
+
+        try (PreparedStatement stmtDecreaseCoins = connection.prepareStatement(sql_decrease_coins);
+             PreparedStatement stmtAssignPackage = connection.prepareStatement(sql_assign_package)) {
+
+            // Decrease coins
+            stmtDecreaseCoins.setString(1, auth);
+            int rowsUpdated = stmtDecreaseCoins.executeUpdate();
+
+            if (rowsUpdated == 0) {
+                writer.println(403, "Failed to decrease coins: invalid user token or insufficient coins.");
+                return;
+            }
+
+            // Assign package
+            stmtAssignPackage.setObject(1, uuid);
+            rowsUpdated = stmtAssignPackage.executeUpdate();
+
+            if (rowsUpdated == 0) {
+                writer.println(403, "No available packages to assign.");
+                return;
+            }
+
+        } catch (SQLException e) {
+            writer.println(400, e.getMessage());
+            return;
+        }
+
+        writer.println(201, "Package successfully bought");
     }
 
     public String POST_battles(StringBuilder data, String additional_request){
