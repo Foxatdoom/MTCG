@@ -30,7 +30,8 @@ CREATE TABLE card (
     name VARCHAR(100) NOT NULL,
     damage FLOAT NOT NULL CHECK (damage >= 0),
     element_type VARCHAR(50) NOT NULL CHECK (element_type IN ('Fire', 'Water', 'Regular')),
-    card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('Spell', 'Monster'))
+    card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('Spell', 'Monster')),
+    owner UUID REFERENCES "user"(user_id) ON DELETE CASCADE
 );
 
 -- Create a table for Stack (User's collection of cards)
@@ -47,7 +48,7 @@ CREATE TABLE stack_card (
     PRIMARY KEY (stack_id, card_id)
 );
 
--- Create a table for Package
+-- Create a table for Package -> shows what packages are still awailable
 CREATE TABLE package (
     package_id UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
     user_id UUID REFERENCES "user"(user_id) ON DELETE CASCADE

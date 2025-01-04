@@ -7,7 +7,7 @@ public class Card {
     private String id;
     private String name;
     private float damage;
-    private String element_type; // not mentioned in curl????????
+    private String element_type;
     private String card_type;
 
     // Using @JsonCreator to get curl request correctly
@@ -63,5 +63,9 @@ public class Card {
 
     public String getCard_type() {
         return card_type;
+    }
+
+    public String toJson(){
+        return "{\"id\":\"" + id + "\",\"name\":\"" + name + "\",\"Card-type\":\"" + card_type + "\",\"Element-type\":\"" + element_type + "\",\"damage\":" + damage + "}";
     }
 }

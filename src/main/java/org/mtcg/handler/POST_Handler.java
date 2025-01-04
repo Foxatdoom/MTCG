@@ -10,8 +10,6 @@ import org.mtcg.db.DbAccess;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class POST_Handler {
 
@@ -21,32 +19,11 @@ public class POST_Handler {
         this.dba = dba;
     }
 
-    public void call_request(StringBuilder info, StringBuilder content, MyPrintWriter writer){
+    public void call_request(String auth, String[] path_parts, StringBuilder info, StringBuilder content, MyPrintWriter writer){
 
         //System.out.println("post_handler");
         //System.out.println("info: "+info.toString());
         //System.out.println("content: "+content.toString());
-
-        String auth = "";
-        String paths = "";
-        String[] path_parts = null; // the first one is always null because every path starts with / !!!!!!
-
-        // Extract path (starts with / and ends at whitespace)
-        Pattern pathPattern = Pattern.compile("\\s(/\\S+)");
-        Matcher pathMatcher = pathPattern.matcher(info.toString());
-        if (pathMatcher.find()) {
-            paths = pathMatcher.group(1);
-            path_parts = paths.split("[/?]"); //splits by / or ?
-        }
-
-        // Extract token
-        Pattern authTokenPattern = Pattern.compile("Authorization: Bearer (\\S+)");
-        Matcher authTokenMatcher = authTokenPattern.matcher(info.toString());
-        if (authTokenMatcher.find()) {
-            auth = authTokenMatcher.group(1);
-        }
-
-        //System.out.println("infos: " + auth + " " + paths + " " + path_parts[1]);
 
         switch (path_parts[1]){
             case "users":
@@ -79,6 +56,9 @@ public class POST_Handler {
                 if(path_parts.length > 2) this.spezific_tradings(auth, path_parts[1], content, writer);
                 else this.tradings(auth, content, writer);
                 break;
+
+            default:
+                writer.println(400, "unknown request");
         }
     }
 
@@ -159,7 +139,6 @@ public class POST_Handler {
     }
 
     private void transactions(String auth, MyPrintWriter writer) {
-        // 4) todo
         dba.POST_transactions(auth, writer);
     }
 

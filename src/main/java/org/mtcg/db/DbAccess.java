@@ -4,6 +4,7 @@ import org.mtcg.Model.Card;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,10 +21,16 @@ public class DbAccess {
         connection = null;
         try {
             connection = dbConnection.connect(); // Establish db connection
+
         } catch (SQLException e) {
             throw new SQLException(e);
         }
         //System.out.println("Database connection established successfully! \n");
+    }
+
+    // for junit tests
+    public DbAccess(Connection connection) throws SQLException {
+        this.connection = connection;
     }
 
     public void close() throws SQLException {
@@ -178,6 +185,8 @@ public class DbAccess {
     public void POST_transactions(String auth, MyPrintWriter writer){
 
         String user_id = "";
+        UUID uid = null;
+        UUID package_id = null;
 
         //step 1: get user_id from auth
         String sql_get_id = "SELECT * FROM \"user\" WHERE token = ?";
@@ -189,6 +198,7 @@ public class DbAccess {
                 // Process ResultSet
                 while (resultSet.next()) {
                     user_id = resultSet.getString("user_id");
+                    uid = UUID.fromString(user_id);
                 }
             }
         }
@@ -200,10 +210,9 @@ public class DbAccess {
         //step 2: check if >= 5 coins
         String sql_check_coins = "SELECT coins FROM \"user\" WHERE user_id = ? AND coins > 4";
 
-        UUID uuid = UUID.fromString(user_id);
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql_check_coins)) {
-            preparedStatement.setObject(1, uuid);
+            preparedStatement.setObject(1, uid);
 
             // Use executeQuery for SELECT statements
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -242,7 +251,7 @@ public class DbAccess {
 
         // Step 4.2: Assign a random package to the user
         String sql_assign_package = "UPDATE package SET user_id = ? WHERE package_id = (" +
-                "SELECT package_id FROM package WHERE user_id IS NULL LIMIT 1)";
+                "SELECT package_id FROM package WHERE user_id IS NULL LIMIT 1) RETURNING package_id";
 
         try (PreparedStatement stmtDecreaseCoins = connection.prepareStatement(sql_decrease_coins);
              PreparedStatement stmtAssignPackage = connection.prepareStatement(sql_assign_package)) {
@@ -257,11 +266,37 @@ public class DbAccess {
             }
 
             // Assign package
-            stmtAssignPackage.setObject(1, uuid);
-            rowsUpdated = stmtAssignPackage.executeUpdate();
+            stmtAssignPackage.setObject(1, uid);
+
+            try (ResultSet rs = stmtAssignPackage.executeQuery()) {
+                if (rs.next()) {
+                    package_id = (UUID) rs.getObject("package_id");  // Retrieve the package_id as UUID
+
+
+
+                } else {
+                    writer.println(403, "No available packages to assign.");
+                    return;
+                }
+            }
+
+        } catch (SQLException e) {
+            writer.println(400, e.getMessage());
+            return;
+        }
+
+        // part 5: Assign cards to user todo die subselect von dem sql darf nur 1 ausgabe haben -> muss irgendwie gefixt werden
+
+        String sql_assign_user_to_cards = "UPDATE card SET owner = ? WHERE card_id IN (" +
+                "SELECT card_id FROM package_card WHERE package_id = ?)";
+
+        try (PreparedStatement stmtUpdateCard = connection.prepareStatement(sql_assign_user_to_cards)) {
+            stmtUpdateCard.setObject(1, uid);
+            stmtUpdateCard.setObject(2, package_id);
+            int rowsUpdated = stmtUpdateCard.executeUpdate();
 
             if (rowsUpdated == 0) {
-                writer.println(403, "No available packages to assign.");
+                writer.println(403, "Failed to update card owner");
                 return;
             }
 
@@ -271,7 +306,9 @@ public class DbAccess {
         }
 
         writer.println(201, "Package successfully bought");
+
     }
+
 
     public String POST_battles(StringBuilder data, String additional_request){
         return "POST_battles";
@@ -283,10 +320,56 @@ public class DbAccess {
 
 
     // ------------ GET --------------
+    public String GET_uid_from_auth(String auth, MyPrintWriter writer){
+        String user_id = "";
 
-    public String GET_cards(StringBuilder data, String additional_request){
-        return "GET_cards";
+        String sql_get_id = "SELECT * FROM \"user\" WHERE token = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_id)) {
+            preparedStatement.setString(1, auth);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Process ResultSet
+                while (resultSet.next()) {
+                    user_id = resultSet.getString("user_id");
+                }
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404, "user not found");
+        }
+        return user_id;
     }
+
+    public List<Card> GET_cards(String user_id, MyPrintWriter writer){
+        List<Card> cards = new ArrayList<>();
+        UUID uid = UUID.fromString(user_id);
+        String sql_get_cards = "SELECT * FROM card WHERE owner = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_cards)) {
+            preparedStatement.setObject(1, uid);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Check if the resultSet contains any rows
+                if (!resultSet.next()) {
+                    writer.println(404, "user has no cards or user not found");
+                    return null;
+                }
+
+                // Iterate through the ResultSet
+                do {
+                    Card c = new Card(resultSet.getString("card_id"), resultSet.getString("name"), resultSet.getFloat("damage"));
+                    cards.add(c);
+                } while (resultSet.next());  // Continue iterating as long as there are more rows
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404, "sql error");
+            return null;
+        }
+        return cards;
+    }
+
 
     public String GET_deck(StringBuilder data, String additional_request){
         return "GET_deck";
