@@ -3,6 +3,7 @@ package org.mtcg.handler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtcg.Model.Card;
+import org.mtcg.Model.Deck;
 import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
@@ -61,7 +62,7 @@ public class GET_Handler {
     }
 
     private void cards(String auth, MyPrintWriter writer) {
-        System.out.println("auth: " + auth);
+        //System.out.println("auth: " + auth);
         if(auth == null | Objects.equals(auth, "")) writer.println(403, "Unauthorized");
         else {
 
@@ -81,12 +82,19 @@ public class GET_Handler {
             output += "]";
 
 
-            writer.println(200, "OK", output);
+            writer.println(200, "Cards found", output);
         }
     }
 
     private void deck(String auth, MyPrintWriter writer){
-
+        String output = "[]";
+        if(auth == null | Objects.equals(auth, "")) writer.println(403, "Unauthorized");
+        else {
+            String uid = dba.GET_uid_from_auth(auth, writer);
+            Deck d = dba.GET_deck(uid, writer);
+            if(d != null) output = d.toJson();
+            writer.println(200, "Deck found", output);
+        }
     }
 
     private void spezial_deck(){

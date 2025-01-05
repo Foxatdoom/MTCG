@@ -1,6 +1,7 @@
 package org.mtcg.db;
 
 import org.mtcg.Model.Card;
+import org.mtcg.Model.Deck;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
 import java.sql.*;
@@ -102,7 +103,7 @@ public class DbAccess {
 
     public void POST_packages(List<Card> cards, MyPrintWriter writer){
 
-        String card_id = "";
+        UUID cid = null;
         String package_id = "";
 
         // Inserting package with no owner yet (user_id set to null)
@@ -136,28 +137,21 @@ public class DbAccess {
 
         // inserting 5 cards
         for (int i = 0; i < 5; i++) {
+            cid = UUID.fromString(cards.get(i).getId());
             name = cards.get(i).getName();
             damage = cards.get(i).getDamage();
             element_type = cards.get(i).getElement_type();
             card_type = cards.get(i).getCard_type();
 
-            String sql_card = "INSERT INTO card (name, damage, element_type, card_type) VALUES (?, ?, ?, ?)";
+            String sql_card = "INSERT INTO card (card_id, name, damage, element_type, card_type) VALUES (?, ?, ?, ?, ?)";
 
-            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_card, Statement.RETURN_GENERATED_KEYS)) {
-                preparedStatement.setString(1, name);
-                preparedStatement.setFloat(2, damage);
-                preparedStatement.setString(3, element_type);
-                preparedStatement.setString(4, card_type);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_card)) {
+                preparedStatement.setObject(1, cid);
+                preparedStatement.setString(2, name);
+                preparedStatement.setFloat(3, damage);
+                preparedStatement.setString(4, element_type);
+                preparedStatement.setString(5, card_type);
                 preparedStatement.executeUpdate();
-
-                // Retrieve the generated package ID
-                try (ResultSet rs_card = preparedStatement.getGeneratedKeys()) {
-                    if (rs_card.next()) {  // Move to the first row
-                        card_id = rs_card.getString(1); // Get the first column of the result
-                    } else {
-                        writer.println(500, "No generated keys returned for card");
-                    }
-                }
 
             } catch (SQLException e) {
                 writer.println(405,e.getMessage() + " (by inserting cards)");
@@ -165,13 +159,12 @@ public class DbAccess {
             }
 
             UUID pi = UUID.fromString(package_id);
-            UUID ci = UUID.fromString(card_id);
 
             String sql_package_card = "INSERT INTO package_card (package_id, card_id) VALUES (?, ?)";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql_package_card)) {
                 preparedStatement.setObject(1, pi);
-                preparedStatement.setObject(2, ci);
+                preparedStatement.setObject(2, cid);
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
@@ -285,7 +278,7 @@ public class DbAccess {
             return;
         }
 
-        // part 5: Assign cards to user todo die subselect von dem sql darf nur 1 ausgabe haben -> muss irgendwie gefixt werden
+        // part 5: Assign cards to user
 
         String sql_assign_user_to_cards = "UPDATE card SET owner = ? WHERE card_id IN (" +
                 "SELECT card_id FROM package_card WHERE package_id = ?)";
@@ -364,15 +357,68 @@ public class DbAccess {
             }
         }
         catch (SQLException e) {
-            writer.println(404, "sql error");
+            writer.println(404, "sql error (get uid)");
             return null;
         }
         return cards;
     }
 
+    public Card GET_card_with_card_id(String card_id, MyPrintWriter writer){
+        Card card = null;
+        UUID cid = UUID.fromString(card_id);
+        String sql_get_card = "SELECT * FROM card WHERE card_id = ?";
 
-    public String GET_deck(StringBuilder data, String additional_request){
-        return "GET_deck";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_card)) {
+            preparedStatement.setObject(1, cid);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Check if the resultSet contains a row
+                if (resultSet.next()) {
+                    card = new Card(
+                            resultSet.getString("card_id"),
+                            resultSet.getString("name"),
+                            resultSet.getFloat("damage")
+                    );
+                } else {
+                    writer.println(404, "Card not found with ID: " + card_id);
+                    return null;
+                }
+            }
+        } catch (SQLException e) {
+            // Log the exception, and send a generic error message to the writer
+            writer.println(500, "Database error: " + e.getMessage());
+            return null;
+        }
+        return card;
+    }
+
+    public Deck GET_deck(String user_id, MyPrintWriter writer){
+        UUID uid = UUID.fromString(user_id);
+        Deck d = new Deck();
+
+        String sql_get_deck = "SELECT card_id FROM deck WHERE user_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_deck)) {
+            preparedStatement.setObject(1, uid);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Check if the resultSet contains any rows
+                if (!resultSet.next()) {
+                    return null;
+                }
+
+                // Iterate through the ResultSet
+                do {
+                    Card c = this.GET_card_with_card_id(resultSet.getString("card_id"), writer);
+                    d.addcard(c);
+                } while (resultSet.next());  // Continue iterating as long as there are more rows
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404, e.getMessage() + " (get deck)");
+            return null;
+        }
+        return d;
     }
 
     public String GET_users(StringBuilder data, String additional_request){
@@ -394,8 +440,41 @@ public class DbAccess {
 
     // ------------ PUT --------------
 
-    public String PUT_deck(StringBuilder data, String additional_request){
-        return "PUT_deck";
+    public void PUT_deck(String user_id, String[] content, MyPrintWriter writer){
+        UUID uid = UUID.fromString(user_id);
+        int rowsAffected = 0;
+        //System.out.println("deck_content: " + content.toString());
+
+        String sql_put_deck = "INSERT INTO deck (user_id, card_id) " +
+                "SELECT ?, ? " +
+                "WHERE NOT EXISTS ( " +
+                "  SELECT 1 " +
+                "  FROM deck " +
+                "  WHERE user_id = ? " +
+                "  GROUP BY user_id " +
+                "  HAVING COUNT(*) >= 4 " +
+                ")";
+
+
+        for (int i = 0; i < content.length; i++) {
+            //System.out.println("card-id: " + content[i]);
+            UUID card_id = UUID.fromString(content[i]);
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_put_deck)) {
+                preparedStatement.setObject(1, uid);
+                preparedStatement.setObject(2, card_id);
+                preparedStatement.setObject(3, uid);
+                rowsAffected += preparedStatement.executeUpdate();
+
+            } catch (SQLException e) {
+                writer.println(400, e.getMessage() + "(put_deck)");
+            }
+        }
+        if (rowsAffected == 0) {
+            writer.println(400, "failed. original: ..."); // todo how to get original ??
+
+        }
+        else writer.println(201, "Deck successfully created");
     }
 
     public String PUT_users(StringBuilder data, String additional_request){

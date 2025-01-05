@@ -63,10 +63,9 @@ CREATE TABLE package_card (
 
 -- Create a table for Deck (Best 4 cards selected by the user -> in logic)
 CREATE TABLE deck (
-    deck_id UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
     user_id UUID REFERENCES "user"(user_id) ON DELETE CASCADE,
     card_id UUID REFERENCES card(card_id) ON DELETE CASCADE,
-    UNIQUE(user_id, card_id)
+    PRIMARY KEY (user_id, card_id)
 );
 
 -- Create a table for Battle

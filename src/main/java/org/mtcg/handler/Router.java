@@ -20,7 +20,7 @@ public class Router {
 
         post = new POST_Handler(dba);
         get = new GET_Handler(dba);
-        //put = new PUT_Handler(dba);
+        put = new PUT_Handler(dba);
         //del = new DELETE_Handler(dba);
     }
 
@@ -65,7 +65,7 @@ public class Router {
 
 
             case "PUT":
-                //put.call_request(info, content, writer);
+                put.call_request(auth, path_parts, info, content, writer);
                 break;
 
 
