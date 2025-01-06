@@ -421,8 +421,30 @@ public class DbAccess {
         return d;
     }
 
-    public String GET_users(StringBuilder data, String additional_request){
-        return "GET_users";
+    public User GET_users(String user_id, MyPrintWriter writer){
+        UUID uid = UUID.fromString(user_id);
+        User u = null;
+        String sql_get_user = "SELECT * FROM \"user\" WHERE user_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_user)) {
+            preparedStatement.setObject(1, uid);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Check if the resultSet contains any rows
+                if (!resultSet.next()) {
+                    writer.println(404, "user not found");
+                    return null;
+                }
+                else {
+                    u = new User(resultSet.getString("username"), resultSet.getString("password"), resultSet.getString("name"), resultSet.getString("bio"), resultSet.getString("image"));
+                }
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404,  e.getMessage() + " (get users)");
+            return null;
+        }
+        return u;
     }
 
     public String GET_stats(StringBuilder data, String additional_request){
@@ -477,8 +499,28 @@ public class DbAccess {
         else writer.println(201, "Deck successfully created");
     }
 
-    public String PUT_users(StringBuilder data, String additional_request){
-        return "PUT_users";
+    public void PUT_users(String user_id, String name, String bio, String image, MyPrintWriter writer){
+        //System.out.println("name: " + name + " bio: " + bio + " image: " + image);
+        UUID uid = UUID.fromString(user_id);
+        String sql_update_user = "UPDATE \"user\" SET name = ?, bio = ?, image = ? WHERE user_id = ?";
+
+        try (PreparedStatement stmtUpdateUser = connection.prepareStatement(sql_update_user)) {
+
+            stmtUpdateUser.setString(1, name);
+            stmtUpdateUser.setString(2, bio);
+            stmtUpdateUser.setString(3, image);
+            stmtUpdateUser.setObject(4, uid);
+            int rowsUpdated = stmtUpdateUser.executeUpdate();
+
+            if (rowsUpdated == 0) {
+                writer.println(403, "Failed to change user information");
+                return;
+            }
+        } catch (SQLException e) {
+            writer.println(400, e.getMessage());
+            return;
+        }
+        writer.println(200, "User changed successfully");
     }
 
 

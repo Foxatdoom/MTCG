@@ -1,16 +1,12 @@
 package org.mtcg.handler;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.mtcg.Model.Card;
-import org.mtcg.Model.Package;
-import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
-import java.io.IOException;
-import java.util.List;
+
+import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 public class PUT_Handler {
 
@@ -32,7 +28,7 @@ public class PUT_Handler {
                 break;
 
             case "users":
-
+                this.users(auth, path_parts[2], content, writer);
                 break;
 
             default:
@@ -53,5 +49,28 @@ public class PUT_Handler {
 
         String uid = dba.GET_uid_from_auth(auth, writer);
         dba.PUT_deck(uid, card_list, writer);
+    }
+
+    private void users(String auth, String what_user, StringBuilder content, MyPrintWriter writer) {
+        if(!Objects.equals(auth, what_user += "-mtcgToken")) writer.println(403, "Unauthorized");
+        else {
+            String uid = dba.GET_uid_from_auth(auth, writer);
+
+            // Extract values from content
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, String> data = null;
+            try {
+                data = mapper.readValue(content.toString(), Map.class);
+            } catch (JsonProcessingException e) {
+                writer.println(400, e.getMessage());
+            }
+
+            // get variables
+            String name = data.get("Name");
+            String bio = data.get("Bio");
+            String image = data.get("Image");
+
+            dba.PUT_users(uid, name, bio, image, writer);
+        }
     }
 }

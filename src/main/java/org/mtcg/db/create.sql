@@ -21,7 +21,10 @@ CREATE TABLE "user" (
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(100) NOT NULL,
     token VARCHAR(100) NOT NULL,
-    coins INTEGER DEFAULT 20 NOT NULL CHECK (coins >= 0)
+    coins INTEGER DEFAULT 20 NOT NULL CHECK (coins >= 0),
+    name VARCHAR(50),
+    bio VARCHAR(100),
+    image VARCHAR(50)
 );
 
 -- Create a table for Card

@@ -1,15 +1,10 @@
 package org.mtcg.handler;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtcg.Model.Card;
 import org.mtcg.Model.Deck;
-import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
-import java.io.IOException;
-import java.sql.ResultSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,13 +30,13 @@ public class GET_Handler {
 
 
             case "deck":
-                if(path_parts.length > 2){} //this.spezial_deck(auth, path_parts[1], content, writer);
-                else this.deck(auth, writer);
+                if(path_parts.length > 2) this.deck(auth, true, writer);
+                else this.deck(auth, false, writer);
                 break;
 
 
             case "users":
-                //this.users();
+                this.users(auth, path_parts[2], writer);
                 break;
 
 
@@ -58,6 +53,9 @@ public class GET_Handler {
             case "tradings":
 
                 break;
+
+            default:
+                writer.println(400, "unknown request");
         }
     }
 
@@ -86,18 +84,24 @@ public class GET_Handler {
         }
     }
 
-    private void deck(String auth, MyPrintWriter writer){
+    private void deck(String auth, boolean is_plain_mode, MyPrintWriter writer){
         String output = "[]";
         if(auth == null | Objects.equals(auth, "")) writer.println(403, "Unauthorized");
         else {
             String uid = dba.GET_uid_from_auth(auth, writer);
             Deck d = dba.GET_deck(uid, writer);
-            if(d != null) output = d.toJson();
+            if(d != null) output = d.toJson(is_plain_mode);
             writer.println(200, "Deck found", output);
         }
     }
 
-    private void spezial_deck(){
-        //todo
+    private void users(String auth, String what_user, MyPrintWriter writer){
+        if(!Objects.equals(auth, what_user += "-mtcgToken")) writer.println(403, "Unauthorized");
+        else {
+            String uid = dba.GET_uid_from_auth(auth, writer);
+            User u = dba.GET_users(uid, writer);
+            String output = u.toJson();
+            writer.println(200, "User found", output);
+        }
     }
 }

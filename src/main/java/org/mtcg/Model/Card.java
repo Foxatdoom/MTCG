@@ -68,4 +68,8 @@ public class Card {
     public String toJson(){
         return "{\"id\":\"" + id + "\",\"name\":\"" + name + "\",\"Card-type\":\"" + card_type + "\",\"Element-type\":\"" + element_type + "\",\"damage\":" + damage + "}";
     }
+
+    public String toJsonPlain(){
+        return "{\"name\":\"" + name + "\",\"damage\":" + damage + "}";
+    }
 }

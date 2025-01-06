@@ -37,10 +37,11 @@ public class Deck {
         if(cards.size() < 4) cards.add(c);
     }
 
-    public String toJson(){
+    public String toJson(boolean plain){
         String output = "[";
         for (int i = 0; i < cards.size(); i++) {
-            output += cards.get(i).toJson();
+            if(plain) output += cards.get(i).toJsonPlain();
+            else output += cards.get(i).toJson();
             if(i+1 != cards.size()) output += ",";
         }
         output += "]";
