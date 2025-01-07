@@ -41,12 +41,12 @@ public class GET_Handler {
 
 
             case "stats":
-
+                this.stats(auth, writer);
                 break;
 
 
             case "scoreboard":
-
+                this.scoreboard(writer);
                 break;
 
 
@@ -103,5 +103,14 @@ public class GET_Handler {
             String output = u.toJson();
             writer.println(200, "User found", output);
         }
+    }
+
+    private void stats(String auth, MyPrintWriter writer){
+        String uid = dba.GET_uid_from_auth(auth, writer);
+        dba.GET_stats(uid, writer);
+    }
+
+    private void scoreboard(MyPrintWriter writer){
+        dba.GET_scoreboard(writer);
     }
 }

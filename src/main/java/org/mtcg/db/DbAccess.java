@@ -447,12 +447,65 @@ public class DbAccess {
         return u;
     }
 
-    public String GET_stats(StringBuilder data, String additional_request){
-        return "GET_stats";
+    public void GET_stats(String user_id, MyPrintWriter writer){
+        UUID uid = UUID.fromString(user_id);
+
+        String sql_get_elo = "SELECT elo, games_played FROM \"user\" WHERE user_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_elo)) {
+            preparedStatement.setObject(1, uid);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Check if the resultSet contains any rows
+                if (!resultSet.next()) {
+                    writer.println(404, "user not found");
+                    return;
+                }
+                else {
+                    writer.println(200, "Elo found", "[\"elo\":\"" + resultSet.getString("elo") + "\", \"games_played:\":" + resultSet.getString("games_played") + "]");
+                    return;
+                }
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404,  e.getMessage() + " (get elo)");
+            return;
+        }
     }
 
-    public String GET_scoreboard(StringBuilder data, String additional_request){
-        return "GET_scoreboard";
+    public void GET_scoreboard(MyPrintWriter writer){
+        String sql_get_scoreboard = "SELECT elo, username FROM \"user\" ORDER BY elo DESC";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_scoreboard)) {
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Build JSON string manually
+                StringBuilder jsonBuilder = new StringBuilder();
+                jsonBuilder.append("[");
+                boolean first = true;
+
+                while (resultSet.next()) {
+                    if (!first) {
+                        jsonBuilder.append(",");
+                    } else {
+                        first = false;
+                    }
+
+                    jsonBuilder.append("{")
+                            .append("\"elo\":").append(resultSet.getInt("elo")).append(",")
+                            .append("\"username\":\"").append(resultSet.getString("username")).append("\"")
+                            .append("}");
+                }
+
+                jsonBuilder.append("]");
+                String jsonString = jsonBuilder.toString();
+
+                writer.println(200, "Scoreboard found", jsonString);
+            }
+        }
+        catch (SQLException e) {
+            writer.println(404,  e.getMessage() + " (get elo)");
+            return;
+        }
     }
 
     public String GET_tradings(StringBuilder data, String additional_request){

@@ -24,7 +24,9 @@ CREATE TABLE "user" (
     coins INTEGER DEFAULT 20 NOT NULL CHECK (coins >= 0),
     name VARCHAR(50),
     bio VARCHAR(100),
-    image VARCHAR(50)
+    image VARCHAR(50),
+    elo INTEGER DEFAULT 100,
+    games_played INTEGER DEFAULT 0
 );
 
 -- Create a table for Card
