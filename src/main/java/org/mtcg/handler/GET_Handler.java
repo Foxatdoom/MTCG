@@ -1,13 +1,12 @@
 package org.mtcg.handler;
 
-import org.mtcg.Model.Card;
 import org.mtcg.Model.Deck;
+import org.mtcg.Model.Stack;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
 import org.mtcg.db.DbAccess;
-import java.util.List;
-import java.util.Objects;
 
+import java.util.Objects;
 
 public class GET_Handler {
 
@@ -28,27 +27,22 @@ public class GET_Handler {
                 this.cards(auth, writer);
                 break;
 
-
             case "deck":
                 if(path_parts.length > 2) this.deck(auth, true, writer);
                 else this.deck(auth, false, writer);
                 break;
 
-
             case "users":
                 this.users(auth, path_parts[2], writer);
                 break;
-
 
             case "stats":
                 this.stats(auth, writer);
                 break;
 
-
             case "scoreboard":
                 this.scoreboard(writer);
                 break;
-
 
             case "tradings":
 
@@ -63,31 +57,17 @@ public class GET_Handler {
         //System.out.println("auth: " + auth);
         if(auth == null | Objects.equals(auth, "")) writer.println(403, "Unauthorized");
         else {
-
             String uid = dba.GET_uid_from_auth(auth, writer);
-            List<Card> cards = dba.GET_cards(uid, writer);
-
-            if(cards == null){
-                return;
-            }
-
-            // get cards in form of json
-            String output = "[";
-            for (int i = 0; i < cards.size(); i++) {
-                output += cards.get(i).toJson();
-                if(i+1 != cards.size()) output += ",";
-            }
-            output += "]";
-
-
-            writer.println(200, "Cards found", output);
+            Stack s = dba.GET_cards(uid, writer);
+            if(s == null) writer.println(400, "No Cards found");
+            else writer.println(200, "Cards found", s.toJson());
         }
     }
 
     private void deck(String auth, boolean is_plain_mode, MyPrintWriter writer){
-        String output = "[]";
         if(auth == null | Objects.equals(auth, "")) writer.println(403, "Unauthorized");
         else {
+            String output = "[]";
             String uid = dba.GET_uid_from_auth(auth, writer);
             Deck d = dba.GET_deck(uid, writer);
             if(d != null) output = d.toJson(is_plain_mode);

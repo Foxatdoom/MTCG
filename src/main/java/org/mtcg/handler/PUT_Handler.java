@@ -17,11 +17,7 @@ public class PUT_Handler {
     }
 
     public void call_request(String auth, String[] path_parts, StringBuilder info, StringBuilder content, MyPrintWriter writer){
-
-        //System.out.println("post_handler");
-        //System.out.println("info: "+info.toString());
-        //System.out.println("content: "+content.toString());
-
+        
         switch (path_parts[1]){
             case "deck":
                 this.deck(auth, content, writer);
@@ -38,9 +34,9 @@ public class PUT_Handler {
 
     private void deck(String auth, StringBuilder content, MyPrintWriter writer){
 
+        // change content to usable list of card_ids
         String cleanedContent = content.toString().replaceAll("[\"\\[\\]]", "");
-        // Split by comma
-        String[] card_list = cleanedContent.split("\\s*,\\s*");
+        String[] card_list = cleanedContent.split("\\s*,\\s*");// Split by comma
 
         if(card_list.length != 4) {
             writer.println(400, "Bad request");

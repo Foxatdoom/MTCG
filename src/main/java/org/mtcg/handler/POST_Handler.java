@@ -27,8 +27,7 @@ public class POST_Handler {
 
         switch (path_parts[1]){
             case "users":
-                if(path_parts.length > 2) this.edit_users(auth, path_parts[1], content, writer);
-                else this.add_users(content, writer);
+                this.add_users(content, writer);
                 break;
 
 
@@ -62,12 +61,9 @@ public class POST_Handler {
         }
     }
 
-
-
-
     public void add_users(StringBuilder content, MyPrintWriter writer){
 
-        ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
+        ObjectMapper objectMapper = new ObjectMapper(); // Create ObjectMapper instance
         User user = null; // Initialize player variable
 
         try {
@@ -81,16 +77,12 @@ public class POST_Handler {
         dba.POST_users(user, writer);
     }
 
-    public void edit_users(String auth, String what_user, StringBuilder content, MyPrintWriter writer){
-        // 14) todo
-    }
-
     public void sessions(StringBuilder content, MyPrintWriter writer){
         ObjectMapper objectMapper = new ObjectMapper();
         User user = null; // Initialize player variable
 
         try {
-            // Convert StringBuilder to String and deserialize into Player object
+            // Convert StringBuilder to User object
             user = objectMapper.readValue(content.toString(), User.class);
         } catch (IOException e) {
             writer.println(400, "Error parsing session data");
@@ -101,8 +93,7 @@ public class POST_Handler {
 
     public void packages(String auth, StringBuilder content, MyPrintWriter writer){
         if(!Objects.equals(auth, "admin-mtcgToken")) writer.println(401, "Not Admin");
-        // ObjectMapper instance
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper(); // ObjectMapper instance
         Package pack = null;
         List<Card> cardList = null;
 
@@ -139,7 +130,8 @@ public class POST_Handler {
     }
 
     private void transactions(String auth, MyPrintWriter writer) {
-        dba.POST_transactions(auth, writer);
+        String uid = dba.GET_uid_from_auth(auth, writer);
+        dba.POST_transactions(uid, writer);
     }
 
     private void battles(String auth, MyPrintWriter writer) {

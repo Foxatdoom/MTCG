@@ -2,13 +2,13 @@ package org.mtcg.db;
 
 import org.mtcg.Model.Card;
 import org.mtcg.Model.Deck;
+import org.mtcg.Model.Stack;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
+
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -26,11 +26,10 @@ public class DbAccess {
         } catch (SQLException e) {
             throw new SQLException(e);
         }
-        //System.out.println("Database connection established successfully! \n");
     }
 
     // for junit tests
-    public DbAccess(Connection connection) throws SQLException {
+    public DbAccess(Connection connection) {
         this.connection = connection;
     }
 
@@ -42,12 +41,9 @@ public class DbAccess {
                 throw new SQLException(e);
             }
         }
-        //System.out.println("DB Connection closed");
     }
 
     // ---------------------------------- USING DB ---------------------------------
-
-
     // ------------ POST --------------
 
     public void POST_users(User user, MyPrintWriter writer){ //aka register
@@ -56,7 +52,7 @@ public class DbAccess {
         String password = user.getPassword();
         String token = user.getToken();
 
-        // Inserting the Player
+        // Inserting User
         String sql = "INSERT INTO \"user\" (username, password, token) VALUES (?, ?, ?)";
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -64,8 +60,7 @@ public class DbAccess {
             preparedStatement.setString(2, password);
             preparedStatement.setString(3, token);
             preparedStatement.executeUpdate();
-            //return "Player created successfully with name: " + name + " and password: " + password;
-            writer.println(201,"OK");
+            writer.println(201,"User created");
 
         } catch (SQLException e) {
             if (e.getMessage().startsWith("ERROR: duplicate key")) {
@@ -79,7 +74,6 @@ public class DbAccess {
     }
 
     public void POST_sessions(User user, MyPrintWriter writer){ //aka login
-
 
         String username = user.getUsername();
         String password = user.getPassword();
@@ -128,14 +122,12 @@ public class DbAccess {
             return;
         }
 
-        // System.out.println(package_id);
-
         String name = "";
         float damage = 0f;
         String element_type = "";
         String card_type = "";
 
-        // inserting 5 cards
+        // creating 5 cards
         for (int i = 0; i < 5; i++) {
             cid = UUID.fromString(cards.get(i).getId());
             name = cards.get(i).getName();
@@ -160,6 +152,7 @@ public class DbAccess {
 
             UUID pi = UUID.fromString(package_id);
 
+            // add these cards to the package
             String sql_package_card = "INSERT INTO package_card (package_id, card_id) VALUES (?, ?)";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql_package_card)) {
@@ -175,133 +168,96 @@ public class DbAccess {
         writer.println(201, "Package added");
     }
 
-    public void POST_transactions(String auth, MyPrintWriter writer){
-
-        String user_id = "";
-        UUID uid = null;
+    public void POST_transactions(String user_id, MyPrintWriter writer) {
+        UUID uid = UUID.fromString(user_id);
         UUID package_id = null;
 
-        //step 1: get user_id from auth
-        String sql_get_id = "SELECT * FROM \"user\" WHERE token = ?";
+        try {
+            connection.setAutoCommit(false); // Begin transaction
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_get_id)) {
-            preparedStatement.setString(1, auth);
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                // Process ResultSet
-                while (resultSet.next()) {
-                    user_id = resultSet.getString("user_id");
-                    uid = UUID.fromString(user_id);
-                }
-            }
-        }
-        catch (SQLException e) {
-            writer.println(404, "user not found");
-            return;
-        }
-
-        //step 2: check if >= 5 coins
-        String sql_check_coins = "SELECT coins FROM \"user\" WHERE user_id = ? AND coins > 4";
-
-
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_check_coins)) {
-            preparedStatement.setObject(1, uid);
-
-            // Use executeQuery for SELECT statements
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) { // Check if a result exists
-                    //System.out.println("got enough money");
-                } else {
-                    writer.println(403, "Not enough Money");
-                    return;
-                }
-            }
-        } catch (SQLException e) {
-            writer.println(400, e.getMessage() + " (step 2)");
-            return;
-        }
-
-
-        //step 3: check if packages available
-        String sql_check_packages = "SELECT COUNT(*) FROM package WHERE user_id IS NULL";
-
-        try (PreparedStatement packageStmt = connection.prepareStatement(sql_check_packages)) {
-            try (ResultSet rs = packageStmt.executeQuery()) {
-                if (rs.next()) {
-                    if(rs.getInt(1) < 1){
-                        writer.println(403, "No packages available");
+            // Step 1: Check if user has >= 5 coins
+            String sql_check_coins = "SELECT coins FROM \"user\" WHERE user_id = ? AND coins > 4";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql_check_coins)) {
+                preparedStatement.setObject(1, uid);
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (!resultSet.next()) {
+                        writer.println(403, "Not enough money");
+                        connection.rollback();
                         return;
                     }
                 }
             }
-        } catch (SQLException e) {
-            writer.println(400, e.getMessage() + " (step 3)");
-            return;
-        }
 
-        // Step 4.1: Decrease user's coins by 5
-        String sql_decrease_coins = "UPDATE \"user\" SET coins = coins - 5 WHERE token = ?";
-
-        // Step 4.2: Assign a random package to the user
-        String sql_assign_package = "UPDATE package SET user_id = ? WHERE package_id = (" +
-                "SELECT package_id FROM package WHERE user_id IS NULL LIMIT 1) RETURNING package_id";
-
-        try (PreparedStatement stmtDecreaseCoins = connection.prepareStatement(sql_decrease_coins);
-             PreparedStatement stmtAssignPackage = connection.prepareStatement(sql_assign_package)) {
-
-            // Decrease coins
-            stmtDecreaseCoins.setString(1, auth);
-            int rowsUpdated = stmtDecreaseCoins.executeUpdate();
-
-            if (rowsUpdated == 0) {
-                writer.println(403, "Failed to decrease coins: invalid user token or insufficient coins.");
-                return;
+            // Step 2: Check if packages are available
+            String sql_check_packages = "SELECT COUNT(*) FROM package WHERE user_id IS NULL";
+            try (PreparedStatement packageStmt = connection.prepareStatement(sql_check_packages)) {
+                try (ResultSet rs = packageStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        writer.println(403, "No packages available");
+                        connection.rollback();
+                        return;
+                    }
+                }
             }
 
-            // Assign package
-            stmtAssignPackage.setObject(1, uid);
+            // Step 3: Decrease user's coins and assign a package
+            String sql_decrease_coins = "UPDATE \"user\" SET coins = coins - 5 WHERE user_id = ?";
+            String sql_assign_package = "UPDATE package SET user_id = ? WHERE package_id = (" +
+                    "SELECT package_id FROM package WHERE user_id IS NULL LIMIT 1) RETURNING package_id";
 
-            try (ResultSet rs = stmtAssignPackage.executeQuery()) {
-                if (rs.next()) {
-                    package_id = (UUID) rs.getObject("package_id");  // Retrieve the package_id as UUID
+            try (PreparedStatement stmtDecreaseCoins = connection.prepareStatement(sql_decrease_coins);
+                 PreparedStatement stmtAssignPackage = connection.prepareStatement(sql_assign_package)) {
 
+                stmtDecreaseCoins.setObject(1, uid);
+                if (stmtDecreaseCoins.executeUpdate() == 0) {
+                    writer.println(403, "Failed to decrease coins.");
+                    connection.rollback();
+                    return;
+                }
 
+                stmtAssignPackage.setObject(1, uid);
+                try (ResultSet rs = stmtAssignPackage.executeQuery()) {
+                    if (rs.next()) {
+                        package_id = (UUID) rs.getObject("package_id");
+                    } else {
+                        writer.println(403, "No available packages to assign.");
+                        connection.rollback();
+                        return;
+                    }
+                }
+            }
 
-                } else {
-                    writer.println(403, "No available packages to assign.");
+            // Step 4: Assign cards to user
+            String sql_assign_user_to_cards = "UPDATE card SET owner = ? WHERE card_id IN (" +
+                    "SELECT card_id FROM package_card WHERE package_id = ?)";
+            try (PreparedStatement stmtUpdateCard = connection.prepareStatement(sql_assign_user_to_cards)) {
+                stmtUpdateCard.setObject(1, uid);
+                stmtUpdateCard.setObject(2, package_id);
+                if (stmtUpdateCard.executeUpdate() == 0) {
+                    writer.println(403, "Failed to update card owner.");
+                    connection.rollback();
                     return;
                 }
             }
 
+            connection.commit(); // Commit transaction
+            writer.println(201, "Package successfully bought");
+
         } catch (SQLException e) {
-            writer.println(400, e.getMessage());
-            return;
-        }
-
-        // part 5: Assign cards to user
-
-        String sql_assign_user_to_cards = "UPDATE card SET owner = ? WHERE card_id IN (" +
-                "SELECT card_id FROM package_card WHERE package_id = ?)";
-
-        try (PreparedStatement stmtUpdateCard = connection.prepareStatement(sql_assign_user_to_cards)) {
-            stmtUpdateCard.setObject(1, uid);
-            stmtUpdateCard.setObject(2, package_id);
-            int rowsUpdated = stmtUpdateCard.executeUpdate();
-
-            if (rowsUpdated == 0) {
-                writer.println(403, "Failed to update card owner");
-                return;
+            try {
+                connection.rollback(); // Roll back transaction on error
+            } catch (SQLException rollbackEx) {
+                writer.println(500, "Rollback failed: " + rollbackEx.getMessage());
             }
-
-        } catch (SQLException e) {
             writer.println(400, e.getMessage());
-            return;
+        } finally {
+            try {
+                connection.setAutoCommit(true); // Reset auto-commit
+            } catch (SQLException e) {
+                writer.println(500, "Failed to reset auto-commit: " + e.getMessage());
+            }
         }
-
-        writer.println(201, "Package successfully bought");
-
     }
-
 
     public String POST_battles(StringBuilder data, String additional_request){
         return "POST_battles";
@@ -310,7 +266,6 @@ public class DbAccess {
     public String POST_tradings(StringBuilder data, String additional_request){
         return "POST_tradings";
     }
-
 
     // ------------ GET --------------
     public String GET_uid_from_auth(String auth, MyPrintWriter writer){
@@ -322,7 +277,6 @@ public class DbAccess {
             preparedStatement.setString(1, auth);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                // Process ResultSet
                 while (resultSet.next()) {
                     user_id = resultSet.getString("user_id");
                 }
@@ -334,8 +288,8 @@ public class DbAccess {
         return user_id;
     }
 
-    public List<Card> GET_cards(String user_id, MyPrintWriter writer){
-        List<Card> cards = new ArrayList<>();
+    public Stack GET_cards(String user_id, MyPrintWriter writer){
+        Stack s = new Stack();
         UUID uid = UUID.fromString(user_id);
         String sql_get_cards = "SELECT * FROM card WHERE owner = ?";
 
@@ -349,10 +303,10 @@ public class DbAccess {
                     return null;
                 }
 
-                // Iterate through the ResultSet
+                // Iterate through ResultSet
                 do {
                     Card c = new Card(resultSet.getString("card_id"), resultSet.getString("name"), resultSet.getFloat("damage"));
-                    cards.add(c);
+                    s.addCard(c);
                 } while (resultSet.next());  // Continue iterating as long as there are more rows
             }
         }
@@ -360,7 +314,7 @@ public class DbAccess {
             writer.println(404, "sql error (get uid)");
             return null;
         }
-        return cards;
+        return s;
     }
 
     public Card GET_card_with_card_id(String card_id, MyPrintWriter writer){
@@ -385,7 +339,6 @@ public class DbAccess {
                 }
             }
         } catch (SQLException e) {
-            // Log the exception, and send a generic error message to the writer
             writer.println(500, "Database error: " + e.getMessage());
             return null;
         }
@@ -459,17 +412,14 @@ public class DbAccess {
                 // Check if the resultSet contains any rows
                 if (!resultSet.next()) {
                     writer.println(404, "user not found");
-                    return;
                 }
                 else {
-                    writer.println(200, "Elo found", "[\"elo\":\"" + resultSet.getString("elo") + "\", \"games_played:\":" + resultSet.getString("games_played") + "]");
-                    return;
+                    writer.println(200, "Elo found", "[\"elo\":" + resultSet.getString("elo") + ", \"games_played:\":" + resultSet.getString("games_played") + "]");
                 }
             }
         }
         catch (SQLException e) {
             writer.println(404,  e.getMessage() + " (get elo)");
-            return;
         }
     }
 
@@ -512,14 +462,12 @@ public class DbAccess {
         return "GET_tradings";
     }
 
-
     // ------------ PUT --------------
-
     public void PUT_deck(String user_id, String[] content, MyPrintWriter writer){
         UUID uid = UUID.fromString(user_id);
         int rowsAffected = 0;
-        //System.out.println("deck_content: " + content.toString());
 
+        // inserted into deck if the user not already have 4 cards assigned to his deck
         String sql_put_deck = "INSERT INTO deck (user_id, card_id) " +
                 "SELECT ?, ? " +
                 "WHERE NOT EXISTS ( " +
@@ -530,9 +478,7 @@ public class DbAccess {
                 "  HAVING COUNT(*) >= 4 " +
                 ")";
 
-
         for (int i = 0; i < content.length; i++) {
-            //System.out.println("card-id: " + content[i]);
             UUID card_id = UUID.fromString(content[i]);
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql_put_deck)) {
@@ -547,14 +493,13 @@ public class DbAccess {
         }
         if (rowsAffected == 0) {
             writer.println(400, "failed. original: ..."); // todo how to get original ??
-
         }
         else writer.println(201, "Deck successfully created");
     }
 
     public void PUT_users(String user_id, String name, String bio, String image, MyPrintWriter writer){
-        //System.out.println("name: " + name + " bio: " + bio + " image: " + image);
         UUID uid = UUID.fromString(user_id);
+
         String sql_update_user = "UPDATE \"user\" SET name = ?, bio = ?, image = ? WHERE user_id = ?";
 
         try (PreparedStatement stmtUpdateUser = connection.prepareStatement(sql_update_user)) {
@@ -575,7 +520,6 @@ public class DbAccess {
         }
         writer.println(200, "User changed successfully");
     }
-
 
     // ------------ DELETE --------------
     public String DELETE_tradings(StringBuilder data, String additional_request){

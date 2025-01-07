@@ -15,9 +15,8 @@ public class Router {
 
     DbAccess dba;
 
-    public Router() throws SQLException {
-        dba = new DbAccess();
-
+    public Router(DbAccess dba) {
+        this.dba = dba;
         post = new POST_Handler(dba);
         get = new GET_Handler(dba);
         put = new PUT_Handler(dba);
@@ -26,7 +25,6 @@ public class Router {
 
 
     public void call_handler(StringBuilder info, StringBuilder content, MyPrintWriter writer){
-
         String spezific_request = "";
         String auth = "";
         String paths = "";
@@ -57,18 +55,13 @@ public class Router {
                 post.call_request(auth, path_parts, info, content, writer);
                 break;
 
-
             case "GET":
                 get.call_request(auth, path_parts, info, content, writer);
                 break;
 
-
-
             case "PUT":
                 put.call_request(auth, path_parts, info, content, writer);
                 break;
-
-
 
             case "DELETE":
                 //del.call_request(info, content, writer);

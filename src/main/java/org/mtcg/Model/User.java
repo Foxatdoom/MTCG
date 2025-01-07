@@ -4,14 +4,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class User {
-    private String username;
-    private String password;
-    private String token;
-    private String name;
-    private String bio;
-    private String image;
+    private final String username;
+    private final String password;
+    private final String token;
+    private final String name;
+    private final String bio;
+    private final String image;
 
-    // Use @JsonCreator to define how to create an instance from JSON
+    // define how to create an instance from JSON
     @JsonCreator
     public User(
             @JsonProperty("Username") String username,   // Maps to the incoming JSON "Username"

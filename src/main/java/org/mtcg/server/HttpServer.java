@@ -1,11 +1,13 @@
 package org.mtcg.server;
 
 import org.mtcg.MyPrintWriter;
+import org.mtcg.db.DbAccess;
 import org.mtcg.handler.Router;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -14,7 +16,7 @@ public class HttpServer {
     private static final int THREAD_POOL_SIZE = 10; // Number of threads in the pool
 
     public static void main(String[] args) {
-        ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE); // Create a fixed thread pool
+        ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE); // Create fixed thread pool
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             serverSocket.setReuseAddress(true); // Make the port reusable immediately
@@ -22,20 +24,20 @@ public class HttpServer {
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                threadPool.execute(new ClientHandler(clientSocket)); // Submit the task to the thread pool
+                threadPool.execute(new ClientHandler(clientSocket)); // Submit task to thread pool
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            threadPool.shutdown(); // Shut down the thread pool gracefully when done
+            threadPool.shutdown(); // Shut down the thread pool when done
         }
     }
 }
 
 class ClientHandler implements Runnable {
     private final Socket socket;
+    DbAccess dba;
     Router r;
-    String response_to_client = "";
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
@@ -64,8 +66,9 @@ class ClientHandler implements Runnable {
                 content.append((char) reader.read());
             }
 
-           // actual code
-            r = new Router();
+           // processing request
+            dba = new DbAccess();
+            r = new Router(dba);
             r.call_handler(info, content, writer);
 
         } catch (Exception e) {
@@ -74,8 +77,8 @@ class ClientHandler implements Runnable {
         } finally {
             try {
                 socket.close();
-                //System.out.println("Socket closed");
-            } catch (IOException e) {
+                dba.close();
+            } catch (IOException | SQLException e) {
                 e.printStackTrace();
             }
         }

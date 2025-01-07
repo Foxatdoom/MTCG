@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Card {
-    private String id;
-    private String name;
-    private float damage;
-    private String element_type;
-    private String card_type;
+    private final String id;
+    private final String name;
+    private final float damage;
+    private final String element_type;
+    private final String card_type;
 
     // Using @JsonCreator to get curl request correctly
     @JsonCreator
@@ -39,9 +39,6 @@ public class Card {
         else {
             this.card_type = "Monster";
         }
-
-
-
     }
 
     // GETTER-Methods
