@@ -135,27 +135,27 @@ public class POST_Handler {
         dba.POST_transactions(uid, writer);
     }
 
-    public float calculate_card_dmg(Card c1, Card c2, boolean spell_involved){
-        float p1_damage = c1.getDamage();
+    public float calculate_card_dmg(Card c1, float dmg1, Card c2, boolean spell_involved){
+        float p1_damage = dmg1;
 
         if(spell_involved){
             if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getName().endsWith("Knight"), true)) p1_damage= 999f;
 
             else if(Objects.equals(c1.getCard_type(), "Spell") && Objects.equals(c2.getName().endsWith("Kraken"), true)) p1_damage = 0f;
 
-            else if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getElement_type(), "Fire")) p1_damage = (c1.getDamage()*2);
-            else if(Objects.equals(c1.getElement_type(), "Fire") && Objects.equals(c2.getElement_type(), "Water")) p1_damage = (c1.getDamage()*0.5f);
+            else if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getElement_type(), "Fire")) p1_damage = (dmg1*2);
+            else if(Objects.equals(c1.getElement_type(), "Fire") && Objects.equals(c2.getElement_type(), "Water")) p1_damage = (dmg1*0.5f);
 
-            else if(Objects.equals(c1.getElement_type(), "Fire") && Objects.equals(c2.getElement_type(), "Regular")) p1_damage = (c1.getDamage()*2);
-            else if(Objects.equals(c1.getElement_type(), "Regular") && Objects.equals(c2.getElement_type(), "Fire")) p1_damage = (c1.getDamage()*0.5f);
+            else if(Objects.equals(c1.getElement_type(), "Fire") && Objects.equals(c2.getElement_type(), "Regular")) p1_damage = (dmg1*2);
+            else if(Objects.equals(c1.getElement_type(), "Regular") && Objects.equals(c2.getElement_type(), "Fire")) p1_damage = (dmg1*0.5f);
 
-            else if(Objects.equals(c1.getElement_type(), "Regular") && Objects.equals(c2.getElement_type(), "Water")) p1_damage = (c1.getDamage()*2);
-            else if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getElement_type(), "Regular")) p1_damage = (c1.getDamage()*0.5f);
+            else if(Objects.equals(c1.getElement_type(), "Regular") && Objects.equals(c2.getElement_type(), "Water")) p1_damage = (dmg1*2);
+            else if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getElement_type(), "Regular")) p1_damage = (dmg1*0.5f);
         }
         else {
-            if(Objects.equals(c1.getName().endsWith("Goblin"), true) && Objects.equals(c2.getName().endsWith("Dragon"), true)) p1_damage = 0;
-            else if(Objects.equals(c1.getName().endsWith("Wizzard"), true) && Objects.equals(c2.getName().endsWith("Ork"), true)) p1_damage = 0;
-            else if(Objects.equals(c1.getName().endsWith("Dragon"), true) && Objects.equals(c2.getName(), "FireElf")) p1_damage = 0;
+            if(Objects.equals(c1.getName().endsWith("Goblin"), true) && Objects.equals(c2.getName().endsWith("Dragon"), true)) p1_damage = 0f;
+            else if(Objects.equals(c1.getName().endsWith("Wizzard"), true) && Objects.equals(c2.getName().endsWith("Ork"), true)) p1_damage = 0f;
+            else if(Objects.equals(c1.getName().endsWith("Dragon"), true) && Objects.equals(c2.getName(), "FireElf")) p1_damage = 0f;
         }
 
         return p1_damage;
@@ -189,17 +189,19 @@ public class POST_Handler {
             c2 = d2.getRandomCard();
             dmg1 = c1.getDamage();
             dmg2 = c2.getDamage();
+            float dmg1_or = dmg1;
+            float dmg2_or = dmg2;
 
             //Spell fight -> Element matters
             if(Objects.equals(c1.getCard_type(), "Spell") | Objects.equals(c2.getCard_type(), "Spell")){
-                dmg1 = this.calculate_card_dmg(c1, c2, true);
-                dmg2 = this.calculate_card_dmg(c2, c1, true);
+                dmg1 = this.calculate_card_dmg(c1, dmg1, c2, true);
+                dmg2 = this.calculate_card_dmg(c2, dmg2, c1, true);
             }
             else {
-                dmg1 = this.calculate_card_dmg(c1, c2, false);
-                dmg2 = this.calculate_card_dmg(c2, c1, false);
+                dmg1 = this.calculate_card_dmg(c1, dmg1,  c2, false);
+                dmg2 = this.calculate_card_dmg(c2, dmg2,  c1, false);
             }
-            log += c1.getName() + ": " + dmg1 + (c1.isLasthitmissed() ? "(missed)" : "") + "(" + c1.getDamage() + "), " + c2.getName() + ": " + dmg2 + (c1.isLasthitmissed() ? "(missed)" : "") + "(" + c2.getDamage() + ")";
+            log += c1.getName() + ": " + dmg1 + (c1.isLasthitmissed() ? "(missed)" : "") + "(" + dmg1_or + "), " + c2.getName() + ": " + dmg2 + (c2.isLasthitmissed() ? "(missed)" : "") + "(" + dmg2_or + ")";
 
             // Player 1 won round
             if(dmg1 > dmg2){
@@ -215,7 +217,7 @@ public class POST_Handler {
                 // user1 gets card of user2
                 Card c = d2.removeCardByCardId(c2.getId());
                 d1.addcard(c);
-                log += "        -> Player1 ("+d1.getCardCount()+" cards) won round against Player2 ("+d2.getCardCount()+" cards)";
+                log += " -> Player1 ("+d1.getCardCount()+" cards) won round against Player2 ("+d2.getCardCount()+" cards)";
             }
 
             // Player 2 won round
@@ -232,7 +234,7 @@ public class POST_Handler {
                 // user2 gets card of user1
                 Card c = d1.removeCardByCardId(c1.getId());
                 d2.addcard(c);
-                log += "        -> Player2 ("+d2.getCardCount()+" cards) won round against Player1 ("+d1.getCardCount()+" cards)";
+                log += " -> Player2 ("+d2.getCardCount()+" cards) won round against Player1 ("+d1.getCardCount()+" cards)";
             }
             else {
                 log += " -> equal dmg - no changes";
@@ -242,11 +244,9 @@ public class POST_Handler {
     }
 
     public void tradings(String auth, StringBuilder content, MyPrintWriter writer) {
-        // 20) todo
     }
 
     public void spezific_tradings(String auth, String pathPart, StringBuilder content, MyPrintWriter writer) {
-        // 20) todo
     }
 
 }

@@ -65,10 +65,10 @@ public class DbAccess {
         } catch (SQLException e) {
             if (e.getMessage().startsWith("ERROR: duplicate key")) {
 
-                writer.println(405, "User already exists");
+                writer.println(409, "User already exists");
             }
             else {
-                writer.println(405, "Login Failed");
+                writer.println(400, "Login Failed");
             }
         }
     }
@@ -118,7 +118,7 @@ public class DbAccess {
             }
 
         } catch (SQLException e) {
-            writer.println(405,e.getMessage() + " (by inserting package)");
+            writer.println(400,e.getMessage() + " (by inserting package)");
             return;
         }
 
@@ -146,7 +146,7 @@ public class DbAccess {
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
-                writer.println(405,e.getMessage() + " (by inserting cards)");
+                writer.println(400,e.getMessage() + " (by inserting cards)");
                 return;
             }
 
@@ -161,7 +161,7 @@ public class DbAccess {
                 preparedStatement.executeUpdate();
 
             } catch (SQLException e) {
-                writer.println(405,e.getMessage() + " (by inserting package_cards)");
+                writer.println(400,e.getMessage() + " (by inserting package_cards)");
                 return;
             }
         }
@@ -274,7 +274,7 @@ public class DbAccess {
                 }
             }
         } catch (SQLException e) {
-            writer.println(500, "Error checking user in battle");
+            writer.println(400, "Error checking user in battle");
             return null; // Exit early on error
         }
 
@@ -287,8 +287,8 @@ public class DbAccess {
                 writer.println(201, "Battle created. Searching for Player...");
                 info[0] = "false";
             } catch (SQLException e) {
-                writer.println(405, "Battle creation Failed");
-                return null; // Exit early on error
+                writer.println(400, "Battle creation Failed");
+                return null;
             }
         } else {
             // Update existing battle with user_2
@@ -303,8 +303,8 @@ public class DbAccess {
                 info[1] = user_1.toString();
                 info[2] = uid.toString();
             } catch (SQLException e) {
-                writer.println(405, "Battle start Failed");
-                return null; // Exit early on error
+                writer.println(400, "Battle start Failed");
+                return null;
             }
         }
         return info;
@@ -382,7 +382,7 @@ public class DbAccess {
             }
         }
         catch (SQLException e) {
-            writer.println(404, "sql error (get uid)");
+            writer.println(400, "sql error (get uid)");
             return null;
         }
         return s;
@@ -465,7 +465,7 @@ public class DbAccess {
             }
         }
         catch (SQLException e) {
-            writer.println(404,  e.getMessage() + " (get users)");
+            writer.println(400,  e.getMessage() + " (get users)");
             return null;
         }
         return u;
@@ -490,7 +490,7 @@ public class DbAccess {
             }
         }
         catch (SQLException e) {
-            writer.println(404,  e.getMessage() + " (get elo)");
+            writer.println(400,  e.getMessage() + " (get elo)");
         }
     }
 
@@ -524,7 +524,7 @@ public class DbAccess {
             }
         }
         catch (SQLException e) {
-            writer.println(404,  e.getMessage() + " (get elo)");
+            writer.println(400,  e.getMessage() + " (get elo)");
             return;
         }
     }
@@ -563,7 +563,7 @@ public class DbAccess {
             }
         }
         if (rowsAffected == 0) {
-            writer.println(400, "failed. original: ..."); // todo how to get original ??
+            writer.println(403, "failed. original: ...");
         }
         else writer.println(201, "Deck successfully created");
     }

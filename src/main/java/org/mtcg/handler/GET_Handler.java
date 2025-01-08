@@ -45,7 +45,6 @@ public class GET_Handler {
                 break;
 
             case "tradings":
-
                 break;
 
             default:
