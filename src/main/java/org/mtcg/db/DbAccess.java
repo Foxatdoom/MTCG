@@ -259,8 +259,79 @@ public class DbAccess {
         }
     }
 
-    public String POST_battles(StringBuilder data, String additional_request){
-        return "POST_battles";
+    public String[] POST_battles(String user_id, MyPrintWriter writer) {
+        UUID uid = UUID.fromString(user_id);
+        UUID user_1 = null;
+
+        String[] info = new String[3];
+
+        // Check if user is already in a battle
+        String sql_check_if_user_in_battle = "SELECT user_1 FROM battle WHERE user_1 IS NOT NULL AND user_2 IS NULL";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql_check_if_user_in_battle)) {
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    user_1 = (UUID) resultSet.getObject("user_1");
+                }
+            }
+        } catch (SQLException e) {
+            writer.println(500, "Error checking user in battle");
+            return null; // Exit early on error
+        }
+
+        if (user_1 == null) {
+            // Create a new battle
+            String sql = "INSERT INTO battle (user_1) VALUES (?)";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                preparedStatement.setObject(1, uid);
+                preparedStatement.executeUpdate();
+                writer.println(201, "Battle created. Searching for Player...");
+                info[0] = "false";
+            } catch (SQLException e) {
+                writer.println(405, "Battle creation Failed");
+                return null; // Exit early on error
+            }
+        } else {
+            // Update existing battle with user_2
+            String sql = "UPDATE battle SET user_2 = ? WHERE user_1 = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                preparedStatement.setObject(1, uid);
+                preparedStatement.setObject(2, user_1);
+                preparedStatement.executeUpdate();
+                writer.println(200, "Battle can start");
+
+                info[0] = "true";
+                info[1] = user_1.toString();
+                info[2] = uid.toString();
+            } catch (SQLException e) {
+                writer.println(405, "Battle start Failed");
+                return null; // Exit early on error
+            }
+        }
+        return info;
+    }
+
+
+    public void POST_battles_setStats(String user_id, int elo_changes, MyPrintWriter writer){
+        UUID uid = UUID.fromString(user_id);
+
+        String sql_update_user = "UPDATE \"user\" SET elo = elo + ?, games_played = games_played+1 WHERE user_id = ?";
+
+        try (PreparedStatement stmtUpdateUser = connection.prepareStatement(sql_update_user)) {
+
+            stmtUpdateUser.setInt(1, elo_changes);
+            stmtUpdateUser.setObject(2, uid);
+            int rowsUpdated = stmtUpdateUser.executeUpdate();
+
+            if (rowsUpdated == 0) {
+                writer.println(403, "Failed to change user stats");
+                return;
+            }
+        } catch (SQLException e) {
+            writer.println(400, e.getMessage());
+            return;
+        }
+        //writer.println(200, "Stats changed successfully");
+
     }
 
     public String POST_tradings(StringBuilder data, String additional_request){

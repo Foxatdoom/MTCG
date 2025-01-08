@@ -3,6 +3,7 @@ package org.mtcg.handler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtcg.Model.Card;
+import org.mtcg.Model.Deck;
 import org.mtcg.Model.Package;
 import org.mtcg.Model.User;
 import org.mtcg.MyPrintWriter;
@@ -129,20 +130,122 @@ public class POST_Handler {
         dba.POST_packages(cardList, writer);
     }
 
-    private void transactions(String auth, MyPrintWriter writer) {
+    public void transactions(String auth, MyPrintWriter writer) {
         String uid = dba.GET_uid_from_auth(auth, writer);
         dba.POST_transactions(uid, writer);
     }
 
-    private void battles(String auth, MyPrintWriter writer) {
-        // 17) todo
+    public float calculate_card_dmg(Card c1, Card c2, boolean spell_involved){
+        float p1_damage = c1.getDamage();
+
+        if(spell_involved){
+            if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getName().endsWith("Knight"), true)) p1_damage= 999f;
+
+            else if(Objects.equals(c1.getCard_type(), "Spell") && Objects.equals(c2.getName().endsWith("Kraken"), true)) p1_damage = 0f;
+
+            else if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getElement_type(), "Fire")) p1_damage = (c1.getDamage()*2);
+            else if(Objects.equals(c1.getElement_type(), "Fire") && Objects.equals(c2.getElement_type(), "Water")) p1_damage = (c1.getDamage()*0.5f);
+
+            else if(Objects.equals(c1.getElement_type(), "Fire") && Objects.equals(c2.getElement_type(), "Regular")) p1_damage = (c1.getDamage()*2);
+            else if(Objects.equals(c1.getElement_type(), "Regular") && Objects.equals(c2.getElement_type(), "Fire")) p1_damage = (c1.getDamage()*0.5f);
+
+            else if(Objects.equals(c1.getElement_type(), "Regular") && Objects.equals(c2.getElement_type(), "Water")) p1_damage = (c1.getDamage()*2);
+            else if(Objects.equals(c1.getElement_type(), "Water") && Objects.equals(c2.getElement_type(), "Regular")) p1_damage = (c1.getDamage()*0.5f);
+        }
+        else {
+            if(Objects.equals(c1.getName().endsWith("Goblin"), true) && Objects.equals(c2.getName().endsWith("Dragon"), true)) p1_damage = 0;
+            else if(Objects.equals(c1.getName().endsWith("Wizzard"), true) && Objects.equals(c2.getName().endsWith("Ork"), true)) p1_damage = 0;
+            else if(Objects.equals(c1.getName().endsWith("Dragon"), true) && Objects.equals(c2.getName(), "FireElf")) p1_damage = 0;
+        }
+
+        return p1_damage;
     }
 
-    private void tradings(String auth, StringBuilder content, MyPrintWriter writer) {
+
+    public void battles(String auth, MyPrintWriter writer) {
+        String[] info = dba.POST_battles(dba.GET_uid_from_auth(auth, writer), writer);
+
+        if(!Objects.equals(info[0], "true")){
+           return;
+        }
+
+        String uid1 = info[1];
+        String uid2 = info[2];
+        Deck d1 = dba.GET_deck(uid1, writer);
+        Deck d2 = dba.GET_deck(uid2, writer);
+
+        Card c1;
+        Card c2;
+        float dmg1 = 0;
+        float dmg2 = 0;
+
+        String log = "";
+
+        // actual fight
+        for (int i = 1; i < 101; i++) {
+            log += "\n\nRound " + i + ": ";
+            //choose random card
+            c1 = d1.getRandomCard();
+            c2 = d2.getRandomCard();
+            dmg1 = c1.getDamage();
+            dmg2 = c2.getDamage();
+
+            //Spell fight -> Element matters
+            if(Objects.equals(c1.getCard_type(), "Spell") | Objects.equals(c2.getCard_type(), "Spell")){
+                dmg1 = this.calculate_card_dmg(c1, c2, true);
+                dmg2 = this.calculate_card_dmg(c2, c1, true);
+            }
+            else {
+                dmg1 = this.calculate_card_dmg(c1, c2, false);
+                dmg2 = this.calculate_card_dmg(c2, c1, false);
+            }
+            log += c1.getName() + ": " + dmg1 + (c1.isLasthitmissed() ? "(missed)" : "") + "(" + c1.getDamage() + "), " + c2.getName() + ": " + dmg2 + (c1.isLasthitmissed() ? "(missed)" : "") + "(" + c2.getDamage() + ")";
+
+            // Player 1 won round
+            if(dmg1 > dmg2){
+                // Player 1 won match
+                if(d2.getCardCount() == 1) {
+                    dba.POST_battles_setStats(uid1, 3, writer);
+                    dba.POST_battles_setStats(uid2, -5, writer);
+                    log += "\n=> Player 1 won the match!";
+                    writer.println(200, "Player 1 Won", log);
+                    return;
+                }
+
+                // user1 gets card of user2
+                Card c = d2.removeCardByCardId(c2.getId());
+                d1.addcard(c);
+                log += "        -> Player1 ("+d1.getCardCount()+" cards) won round against Player2 ("+d2.getCardCount()+" cards)";
+            }
+
+            // Player 2 won round
+            else if(dmg1 < dmg2){
+                // Player 2 won match
+                if(d1.getCardCount() == 1) {
+                    dba.POST_battles_setStats(uid1, -5, writer);
+                    dba.POST_battles_setStats(uid2, 3, writer);
+                    log += "\n=> Player 2 won the match!";
+                    writer.println(200, "Player 2 Won", log);
+                    return;
+                }
+
+                // user2 gets card of user1
+                Card c = d1.removeCardByCardId(c1.getId());
+                d2.addcard(c);
+                log += "        -> Player2 ("+d2.getCardCount()+" cards) won round against Player1 ("+d1.getCardCount()+" cards)";
+            }
+            else {
+                log += " -> equal dmg - no changes";
+            }
+        }
+        writer.println(200, "reached Round limit - elo are not changed", log);
+    }
+
+    public void tradings(String auth, StringBuilder content, MyPrintWriter writer) {
         // 20) todo
     }
 
-    private void spezific_tradings(String auth, String pathPart, StringBuilder content, MyPrintWriter writer) {
+    public void spezific_tradings(String auth, String pathPart, StringBuilder content, MyPrintWriter writer) {
         // 20) todo
     }
 

@@ -18,6 +18,18 @@ public class Stack {
         stack.remove(card);
     }
 
+    // for testing purposes
+    public Card getCard(int index) {
+        if (index < 0 || index >= stack.size()) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + stack.size());
+        }
+        return stack.get(index);
+    }
+
+    public List<Card> getCards(){
+        return stack;
+    }
+
     public String toJson(){
         // get cards in form of json
         String output = "[";

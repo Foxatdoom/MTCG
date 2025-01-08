@@ -2,6 +2,7 @@ package org.mtcg.Model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Deck {
 
@@ -33,8 +34,24 @@ public class Deck {
         return cards.get((int) (Math.random() * cards.size()));
     }
 
+    public Card removeCardByCardId(String card_id) {
+        Card removed_card = null;
+        for (int i = 0; i < cards.size(); i++) {
+            if(Objects.equals(cards.get(i).getId(), card_id)){
+                removed_card = cards.get(i);
+                cards.remove(i);
+                break;
+            }
+        }
+        return removed_card;
+    }
+
+    public int getCardCount() {
+        return cards.size();
+    }
+
     public void addcard(Card c){
-        if(cards.size() < 4) cards.add(c);
+        cards.add(c);
     }
 
     public String toJson(boolean plain){

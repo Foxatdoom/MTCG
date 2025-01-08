@@ -320,3 +320,11 @@ echo .
 echo .
 
 if [ $pauseFlag -eq 1 ]; then read -p "Press enter to continue..."; fi
+
+# --------------------------------------------------
+echo "17) battle"
+curl -i -X POST http://localhost:10001/battles --header "Authorization: Bearer kienboec-mtcgToken" &
+curl -i -X POST http://localhost:10001/battles --header "Authorization: Bearer altenhof-mtcgToken" &
+wait
+
+if [ $pauseFlag -eq 1 ]; then read -p "Press enter to continue..."; fi

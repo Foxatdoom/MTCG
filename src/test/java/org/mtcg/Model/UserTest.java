@@ -28,7 +28,7 @@ class Model_Test {
     @Test
     void Card_toJson(){
         Card c = new Card("999f0dc7-37b5-426e-994e-43fc3ac83c08", "FireWitch", 15.0f);
-        assertEquals("{\"id\":\"999f0dc7-37b5-426e-994e-43fc3ac83c08\",\"name\":\"FireWitch\",\"Card-type\":Monster\",\"Element-type\":Fire\"damage\":"+15.0f+"}", c.toJson());
+        assertEquals("{\"id\":\"999f0dc7-37b5-426e-994e-43fc3ac83c08\",\"name\":\"FireWitch\",\"Card-type\":\"Monster\",\"Element-type\":\"Fire\",\"damage\":"+15.0f+"}", c.toJson());
     }
 
     @Test
@@ -45,15 +45,18 @@ class Model_Test {
         assertEquals(5f, p.getSpecificCard(0).getDamage());
     }
 
+    // won't test stack because it is too similar to deck
     @Test
     void Deck(){
-        //todo
+        Card c1 = new Card("0", "WaterGoblin", 5f);
+        Card c2 = new Card("1", "Slime", 1f);
+        Card c3 = new Card("2", "DarkSpell", 20f);
+        Card c4 = new Card("4", "NormalElf", 3f);
+        Deck d = new Deck(c1,c2,c3,c4);
+
+        String s = "[{\"name\":\"WaterGoblin\",\"damage\":5.0},{\"name\":\"Slime\",\"damage\":1.0},{\"name\":\"DarkSpell\",\"damage\":20.0},{\"name\":\"NormalElf\",\"damage\":3.0}]";
+
+        assertEquals("DarkSpell", d.getCard(2).getName());
+        assertEquals(s, d.toJson(true));
     }
-
-    @Test
-    void Stack(){
-        //todo
-    }
-
-
 }

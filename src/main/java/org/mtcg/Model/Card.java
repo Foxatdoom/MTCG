@@ -3,12 +3,17 @@ package org.mtcg.Model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Random;
+
 public class Card {
     private final String id;
     private final String name;
     private final float damage;
     private final String element_type;
     private final String card_type;
+
+    private double hitrate = 100.0;
+    private boolean lasthitmissed = false;
 
     // Using @JsonCreator to get curl request correctly
     @JsonCreator
@@ -50,8 +55,19 @@ public class Card {
         return name;
     }
 
+    // Extra feature: hitrate system - default 100%
     public float getDamage() {
-        return damage;
+        double random = Math.random() * 100;
+        if(random < this.hitrate){
+            hitrate -= 10;
+            lasthitmissed = false;
+            return damage;
+        }
+        else {
+            hitrate = 100;
+            lasthitmissed = true;
+            return 0;
+        }
     }
 
     public String getElement_type() {
@@ -60,6 +76,10 @@ public class Card {
 
     public String getCard_type() {
         return card_type;
+    }
+
+    public boolean isLasthitmissed() {
+        return lasthitmissed;
     }
 
     public String toJson(){
